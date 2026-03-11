@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Landing Constructor API Tester</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1115;
+        --panel: #171a21;
+        --text: #e7e7e7;
+        --muted: #a0a7b4;
+        --accent: #4da3ff;
+        --border: #2a2f3a;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 16px;
+        color: var(--muted);
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #0c0e13;
+        color: var(--text);
+        font-size: 14px;
+      }
+      textarea {
+        min-height: 120px;
+        font-family: "Consolas", "Courier New", monospace;
+      }
+      button {
+        cursor: pointer;
+        background: var(--accent);
+        color: #0b0d12;
+        font-weight: 600;
+        border: none;
+      }
+      button.secondary {
+        background: #2b3240;
+        color: var(--text);
+      }
+      .buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #0c0e13;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      .status {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>API Tester</h1>
+      <p>Проверьте эндпоинты FastAPI. Ответ отображается в JSON.</p>
+
+      <section class="panel">
+        <h2>Настройки</h2>
+        <div class="row">
+          <div>
+            <label for="baseUrl">Base URL</label>
+            <input id="baseUrl" value="http://localhost:3000/api" />
+          </div>
+          <div>
+            <label for="authToken">Auth Token (Bearer)</label>
+            <input id="authToken" placeholder="Будет заполнен после логина" />
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Регистрация</h2>
+        <div class="row">
+          <div>
+            <label for="companyType">Тип компании</label>
+            <select id="companyType">
+              <option value="small">small</option>
+              <option value="large">large</option>
+            </select>
+          </div>
+          <div>
+            <label for="username">Имя пользователя</label>
+            <input id="username" value="demo" />
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" value="demo@mail.ru" />
+          </div>
+          <div>
+            <label for="password">Пароль</label>
+            <input id="password" type="password" value="123456" />
+          </div>
+          <div>
+            <label for="confirmPassword">Подтверждение пароля</label>
+            <input id="confirmPassword" type="password" value="123456" />
+          </div>
+        </div>
+        <div class="buttons">
+          <button data-action="register">Создать клиента</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Авторизация</h2>
+        <div class="row">
+          <div>
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" value="demo@mail.ru" />
+          </div>
+          <div>
+            <label for="loginPassword">Пароль</label>
+            <input id="loginPassword" type="password" value="123456" />
+          </div>
+        </div>
+        <div class="buttons">
+          <button data-action="login">Войти</button>
+          <button class="secondary" data-action="logout">Выйти</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Клиент</h2>
+        <div class="row">
+          <div>
+            <label for="planId">Plan ID</label>
+            <input id="planId" placeholder="ID тарифа" />
+          </div>
+        </div>
+        <div class="buttons">
+          <button data-action="getMe">Получить профиль</button>
+          <button data-action="selectPlan">Выбрать тариф</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Тарифы</h2>
+        <div class="row">
+          <div>
+            <label for="newPlanName">Название</label>
+            <input id="newPlanName" value="Custom Plan" />
+          </div>
+          <div>
+            <label for="newPlanFeatures">Features (JSON array)</label>
+            <input id="newPlanFeatures" value='["Feature A","Feature B"]' />
+          </div>
+          <div>
+            <label for="newPlanLimits">Limits (JSON object)</label>
+            <input id="newPlanLimits" value='{"projects":5,"templates":8}' />
+          </div>
+          <div>
+            <label for="targetPlanId">Plan ID для действий</label>
+            <input id="targetPlanId" placeholder="ID тарифа" />
+          </div>
+        </div>
+        <div class="buttons">
+          <button data-action="listPlans">Получить список</button>
+          <button data-action="getPlan">Получить</button>
+          <button data-action="createPlan">Создать</button>
+          <button data-action="updatePlan">Обновить</button>
+          <button class="secondary" data-action="deletePlan">Удалить</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Ответ</h2>
+        <pre id="output">{}</pre>
+        <div id="status" class="status"></div>
+      </section>
+    </main>
+
+    <script>
+      const output = document.getElementById("output");
+      const statusEl = document.getElementById("status");
+
+      function getBaseUrl() {
+        return document.getElementById("baseUrl").value.trim();
+      }
+
+      function getToken() {
+        return document.getElementById("authToken").value.trim();
+      }
+
+      function setToken(token) {
+        document.getElementById("authToken").value = token;
+      }
+
+      function showResult(data, response) {
+        if (typeof data === "string") {
+          output.textContent = JSON.stringify({ message: data }, null, 2);
+        } else {
+          output.textContent = JSON.stringify(data, null, 2);
+        }
+        statusEl.textContent = response
+          ? `HTTP ${response.status} ${response.statusText}`
+          : "Network error";
+      }
+
+      async function request(path, options = {}) {
+        try {
+          const response = await fetch(`${getBaseUrl()}${path}`, options);
+          const contentType = response.headers.get("content-type") || "";
+          let data;
+
+          if (contentType.includes("application/json")) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            data = text ? { message: text } : { message: "Empty response" };
+          }
+
+          showResult(data, response);
+          return data;
+        } catch (error) {
+          showResult({ message: error.message || "Request failed" }, null);
+          return null;
+        }
+      }
+
+      function authHeaders() {
+        const token = getToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      }
+
+      document.body.addEventListener("click", async (event) => {
+        if (!(event.target instanceof HTMLButtonElement)) return;
+        const action = event.target.dataset.action;
+        if (!action) return;
+
+        if (action === "register") {
+          const payload = {
+            company_type: document.getElementById("companyType").value,
+            username: document.getElementById("username").value,
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+            confirm_password: document.getElementById("confirmPassword").value,
+          };
+          await request("/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          return;
+        }
+
+        if (action === "login") {
+          const payload = {
+            email: document.getElementById("loginEmail").value,
+            password: document.getElementById("loginPassword").value,
+          };
+          const data = await request("/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (data.token) {
+            setToken(data.token);
+          }
+          return;
+        }
+
+        if (action === "logout") {
+          await request("/auth/logout", {
+            method: "POST",
+            headers: { ...authHeaders() },
+          });
+          return;
+        }
+
+        if (action === "getMe") {
+          await request("/clients/me", { headers: { ...authHeaders() } });
+          return;
+        }
+
+        if (action === "selectPlan") {
+          const planId = document.getElementById("planId").value;
+          await request("/clients/me/plan", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify({ plan_id: planId }),
+          });
+          return;
+        }
+
+        if (action === "listPlans") {
+          await request("/plans");
+          return;
+        }
+
+        if (action === "getPlan") {
+          const planId = document.getElementById("targetPlanId").value;
+          await request(`/plans/${planId}`);
+          return;
+        }
+
+        if (action === "createPlan") {
+          const payload = {
+            name: document.getElementById("newPlanName").value,
+            features: JSON.parse(
+              document.getElementById("newPlanFeatures").value || "[]"
+            ),
+            limits: JSON.parse(
+              document.getElementById("newPlanLimits").value || "null"
+            ),
+          };
+          await request("/plans", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          return;
+        }
+
+        if (action === "updatePlan") {
+          const planId = document.getElementById("targetPlanId").value;
+          const payload = {
+            name: document.getElementById("newPlanName").value,
+            features: JSON.parse(
+              document.getElementById("newPlanFeatures").value || "[]"
+            ),
+            limits: JSON.parse(
+              document.getElementById("newPlanLimits").value || "null"
+            ),
+          };
+          await request(`/plans/${planId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          return;
+        }
+
+        if (action === "deletePlan") {
+          const planId = document.getElementById("targetPlanId").value;
+          await request(`/plans/${planId}`, {
+            method: "DELETE",
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
