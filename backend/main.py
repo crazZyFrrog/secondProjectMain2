@@ -36,6 +36,7 @@ from validation import (
 from telegram_notifications import (
     send_new_plan_purchase_notification,
     send_test_message,
+    send_new_user_registration_notification,
 )
 
 app = FastAPI(title="Landing Constructor API")
@@ -248,6 +249,14 @@ def register(payload: RegisterRequestSchema):
             ),
         )
 
+    # Отправляем уведомление о новой регистрации в Telegram
+    send_new_user_registration_notification(
+        email=payload.email.strip(),
+        username=payload.username.strip(),
+        company_type=payload.company_type,
+        client_id=client_id,
+    )
+
     token = create_access_token(client_id)
     return {
         "id": client_id,
@@ -323,10 +332,11 @@ def select_plan(payload: PlanSelectSchema, client: Dict[str, object] = Depends(g
             (payload.plan_id, client["id"]),
         )
 
-    # Отправляем уведомление в Telegram только при реальной смене тарифа
-    # и только для Pro / Enterprise. Ошибки внутри уведомления не блокируют основной сценарий.
+    # Отправляем уведомление в Telegram при переходе на Pro/Enterprise тариф
+    # Уведомление отправляется только при реальной смене тарифа или при первом выборе Pro/Enterprise
     if previous_plan_id != payload.plan_id:
         plan_name = str(plan["name"])
+        # Проверяем, является ли новый тариф Pro или Enterprise
         if plan_name.lower() in ("pro", "enterprise"):
             send_new_plan_purchase_notification(
                 email=str(client["email"]),

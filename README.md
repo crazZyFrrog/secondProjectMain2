@@ -45,7 +45,7 @@ python -m uvicorn main:app --reload --port 5001
 ## 🎯 Возможности
 
 ### Реализовано (V2)
-- ✅ Система авторизации (mock)
+- ✅ Система авторизации с JWT
 - ✅ 12 страниц (публичные + приватные)
 - ✅ Галерея из 6 шаблонов
 - ✅ Редактор проектов
@@ -55,11 +55,9 @@ python -m uvicorn main:app --reload --port 5001
 - ✅ Настройки аккаунта
 - ✅ Демонстрационный шаблон на главной
 - ✅ Улучшенная навигация профиля
+- ✅ **Telegram-уведомления о регистрациях и покупках тарифов**
 
 ### В разработке
-- 🔄 Реальная AI-генерация
-- 🔄 Реальный экспорт документов
-- 🔄 Система платежей
 - 🔄 Реальная AI-генерация
 - 🔄 Реальный экспорт документов
 - 🔄 Система платежей
@@ -67,9 +65,19 @@ python -m uvicorn main:app --reload --port 5001
 ## 📚 Документация
 
 - [Frontend README](./frontend/README.md) - Детальная документация фронтенда
-- [Backend README](./backend/README.md) - Планируемая архитектура бэкенда
+- [Backend README](./backend/README.md) - Документация бэкенда и API
+- [Telegram Setup](./backend/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
 - [Структура страниц](./frontend/STRUCTURE.md) - Описание всех страниц
 - [Changelog V2](./frontend/CHANGELOG_V2.md) - Изменения в версии 2
+
+## 📱 Telegram-уведомления
+
+Проект поддерживает отправку уведомлений в Telegram:
+- 🎉 При регистрации нового пользователя
+- 💎 При переходе на тариф Pro
+- 👑 При переходе на тариф Enterprise
+
+**Инструкция по настройке:** [backend/TELEGRAM_SETUP.md](./backend/TELEGRAM_SETUP.md)
 
 ## 🛠 Технологии
 
@@ -83,7 +91,9 @@ python -m uvicorn main:app --reload --port 5001
 ### Backend
 - FastAPI + Uvicorn
 - SQLite (локальный файл)
-- JWT‑подобные токены
+- JWT-токены для авторизации
+- Telegram Bot API для уведомлений
+- httpx для HTTP-запросов
 
 ## 📝 Лицензия
 

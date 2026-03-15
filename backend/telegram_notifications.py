@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Dict, Optional
 
 import httpx
@@ -9,6 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Настраиваем логирование
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("telegram_notifications")
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
@@ -39,7 +42,7 @@ def _log_response(status_code: int, body: str) -> None:
     logger.info("Telegram response: status=%s, body=%s", status_code, body)
 
 
-def send_telegram_message(text: str, chat_id: Optional[str] = None, timeout_seconds: float = 5.0) -> None:
+def send_telegram_message(text: str, chat_id: Optional[str] = None, timeout_seconds: float = 10.0) -> None:
     """
     Отправляет произвольное сообщение в Telegram.
 
@@ -64,17 +67,63 @@ def send_telegram_message(text: str, chat_id: Optional[str] = None, timeout_seco
         "parse_mode": "HTML",
     }
 
-    try:
-        _log_request(safe_url, payload)
-        response = httpx.post(url, json=payload, timeout=timeout_seconds)
-        _log_response(response.status_code, response.text)
+    # Небольшой механизм ретраев для нестабильной сети (например, таймауты TLS handhshake).
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        try:
+            _log_request(safe_url, payload)
+            response = httpx.post(
+                url,
+                json=payload,
+                timeout=httpx.Timeout(timeout_seconds),
+            )
+            _log_response(response.status_code, response.text)
 
-        if response.status_code >= 400:
-            logger.error("Telegram API returned error status=%s, body=%s", response.status_code, response.text)
-    except httpx.RequestError as exc:
-        logger.error("Telegram request failed: %s", exc)
-    except Exception as exc:
-        logger.error("Unexpected error during Telegram request: %s", exc)
+            if response.status_code >= 400:
+                logger.error(
+                    "Telegram API returned error status=%s, body=%s",
+                    response.status_code,
+                    response.text,
+                )
+            # Успешный HTTP‑ответ (даже если 4xx/5xx) — выходим из цикла ретраев.
+            break
+        except httpx.RequestError as exc:
+            logger.error(
+                "Telegram request failed on attempt %s/%s: %s",
+                attempt,
+                max_attempts,
+                exc,
+            )
+            if attempt < max_attempts:
+                # Экспоненциальная задержка перед повтором
+                sleep_seconds = 2 ** (attempt - 1)
+                time.sleep(sleep_seconds)
+        except Exception as exc:
+            logger.error("Unexpected error during Telegram request: %s", exc)
+            break
+
+
+def send_new_user_registration_notification(
+    *,
+    email: str,
+    username: str,
+    company_type: str,
+    client_id: str,
+) -> None:
+    """
+    Отправляет уведомление о регистрации нового пользователя.
+    Ошибки логируются, но не прерывают основной сценарий.
+    """
+    company_type_ru = "Малый бизнес" if company_type == "small" else "Крупный бизнес"
+    text = (
+        "🎉 <b>Новая регистрация пользователя</b>\n\n"
+        f"👤 Имя: <b>{username}</b>\n"
+        f"📧 Email: <code>{email}</code>\n"
+        f"🏢 Тип компании: {company_type_ru}\n"
+        f"🆔 ID клиента: <code>{client_id}</code>\n"
+        f"📦 Текущий тариф: <b>Free</b>"
+    )
+    send_telegram_message(text=text)
 
 
 def send_new_plan_purchase_notification(
@@ -87,11 +136,12 @@ def send_new_plan_purchase_notification(
     Отправляет уведомление о новом оформлении тарифа Pro/Enterprise.
     Ошибки логируются, но не прерывают основной сценарий.
     """
+    icon = "💎" if plan_name.lower() == "pro" else "👑"
     text = (
-        "<b>Новый клиент оформил тариф</b>\n"
-        f"Тариф: <b>{plan_name}</b>\n"
-        f"Email: <code>{email}</code>\n"
-        f"ID клиента: <code>{client_id}</code>"
+        f"{icon} <b>Новый клиент оформил тариф {plan_name}</b>\n\n"
+        f"📦 Тариф: <b>{plan_name}</b>\n"
+        f"📧 Email: <code>{email}</code>\n"
+        f"🆔 ID клиента: <code>{client_id}</code>"
     )
     send_telegram_message(text=text)
 
