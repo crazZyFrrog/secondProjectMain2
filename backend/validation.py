@@ -317,3 +317,8 @@ class PasswordUpdateSchema(BaseModel):
         if len(s) < MIN_PASSWORD_LEN:
             raise ValueError(f"Минимум {MIN_PASSWORD_LEN} символов")
         return s
+
+
+class TelegramTestMessageSchema(BaseModel):
+    chat_id: Optional[str] = None
+    text: Optional[str] = Field(default=None, max_length=MAX_STR)

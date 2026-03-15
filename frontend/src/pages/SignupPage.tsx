@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { validateEmail } from '../api/apiClient'
 import { UserPlus } from 'lucide-react'
@@ -26,6 +26,12 @@ export default function SignupPage() {
   const signup = useAuthStore(state => state.signup)
   const authError = useAuthStore(state => state.error)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const searchParams = new URLSearchParams(location.search)
+  const rawPlan = (searchParams.get('plan') || 'free').toLowerCase()
+  const selectedPlan: 'free' | 'pro' | 'enterprise' =
+    rawPlan === 'pro' || rawPlan === 'enterprise' ? (rawPlan as 'pro' | 'enterprise') : 'free'
 
   useEffect(() => {
     useAuthStore.setState({ error: null })
@@ -74,7 +80,7 @@ export default function SignupPage() {
     setFieldErrors({})
     
     try {
-      await signup(name, email, password, 'free', agreed, agreed)
+      await signup(name, email, password, selectedPlan, agreed, agreed)
       navigate('/dashboard')
     } catch (error: any) {
       const apiFieldErrors = error?.fieldErrors as Record<string, string> | undefined

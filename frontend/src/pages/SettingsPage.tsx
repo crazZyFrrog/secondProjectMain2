@@ -27,6 +27,9 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
+  const [upgradingPlan, setUpgradingPlan] = useState(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
+  const [upgradeSuccess, setUpgradeSuccess] = useState<string | null>(null)
 
   const tabs = [
     { id: 'profile', name: 'Профиль', icon: <User size={20} /> },
@@ -82,6 +85,53 @@ export default function SettingsPage() {
       isMounted = false
     }
   }, [])
+
+  const handleUpgradeToPro = async () => {
+    setUpgradeError(null)
+    setUpgradeSuccess(null)
+    setUpgradingPlan(true)
+    try {
+      const token = getAuthToken()
+      const plans = await apiRequest<Array<{ id: string; name: string; features: string[]; limits: Record<string, number> | null }>>(
+        '/plans',
+        { token }
+      )
+      const proPlan = plans.find(plan => plan.name.toLowerCase().includes('pro'))
+      if (!proPlan) {
+        throw new Error('Тариф Pro не найден. Обратитесь в поддержку.')
+      }
+
+      await apiRequest('/clients/me/plan', {
+        method: 'PATCH',
+        token,
+        body: { plan_id: proPlan.id }
+      })
+
+      const subscription = await apiRequest<{
+        plan_name: string
+        limits: Record<string, number> | null
+        usage: Record<string, number>
+        expires_at: string | null
+      }>('/clients/me/subscription', { token })
+
+      setSubscriptionInfo({
+        planName: subscription.plan_name,
+        limits: subscription.limits,
+        usage: subscription.usage,
+        expiresAt: subscription.expires_at
+      })
+
+      useAuthStore.setState(state => ({
+        user: state.user ? { ...state.user, subscription: 'pro' } : state.user
+      }))
+
+      setUpgradeSuccess('Тариф успешно обновлён до Pro')
+    } catch (err: any) {
+      setUpgradeError(err.message || 'Не удалось обновить тариф')
+    } finally {
+      setUpgradingPlan(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -265,14 +315,27 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     {user?.subscription === 'free' && (
-                      <Link
-                        to="/pricing"
-                        className="inline-flex items-center bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition"
+                      <button
+                        type="button"
+                        onClick={handleUpgradeToPro}
+                        disabled={upgradingPlan}
+                        className="inline-flex items-center bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Обновить до Pro
-                      </Link>
+                        {upgradingPlan ? 'Обновление...' : 'Обновить до Pro'}
+                      </button>
                     )}
                   </div>
+
+                  {upgradeError && (
+                    <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      {upgradeError}
+                    </div>
+                  )}
+                  {upgradeSuccess && (
+                    <div className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                      {upgradeSuccess}
+                    </div>
+                  )}
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="p-4 border border-gray-200 rounded-lg">

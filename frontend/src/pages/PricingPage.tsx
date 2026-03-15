@@ -110,7 +110,15 @@ export default function PricingPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {plans.map((plan, idx) => (
+            {plans.map((plan, idx) => {
+              const planKey =
+                plan.name.toLowerCase().includes('enterprise')
+                  ? 'enterprise'
+                  : plan.name.toLowerCase().includes('pro')
+                  ? 'pro'
+                  : 'free'
+
+              return (
               <div
                 key={idx}
                 className={`bg-white rounded-xl shadow-sm overflow-hidden ${
@@ -142,7 +150,7 @@ export default function PricingPage() {
                   </div>
 
                   <Link
-                    to={plan.name === 'Enterprise' ? '#' : '/signup'}
+                    to={planKey === 'enterprise' ? '#' : `/signup?plan=${planKey}`}
                     className={`block w-full text-center py-3 px-4 rounded-lg font-medium transition mb-6 ${
                       plan.highlighted
                         ? 'bg-primary-600 text-white hover:bg-primary-700'
@@ -168,7 +176,8 @@ export default function PricingPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

@@ -31,6 +31,11 @@ from validation import (
     ExportSchema,
     NotificationsUpdateSchema,
     PasswordUpdateSchema,
+    TelegramTestMessageSchema,
+)
+from telegram_notifications import (
+    send_new_plan_purchase_notification,
+    send_test_message,
 )
 
 app = FastAPI(title="Landing Constructor API")
@@ -301,9 +306,11 @@ def get_me(client: Dict[str, object] = Depends(get_current_user)):
 
 @api_router.patch("/clients/me/plan", responses={400: {"description": "Ошибка валидации"}})
 def select_plan(payload: PlanSelectSchema, client: Dict[str, object] = Depends(get_current_user)):
+    previous_plan_id = client.get("plan_id")
+
     with get_connection() as conn:
         plan = conn.execute(
-            "SELECT 1 FROM plans WHERE id = ?",
+            "SELECT * FROM plans WHERE id = ?",
             (payload.plan_id,),
         ).fetchone()
         if not plan:
@@ -315,6 +322,18 @@ def select_plan(payload: PlanSelectSchema, client: Dict[str, object] = Depends(g
             "UPDATE clients SET plan_id = ? WHERE id = ?",
             (payload.plan_id, client["id"]),
         )
+
+    # Отправляем уведомление в Telegram только при реальной смене тарифа
+    # и только для Pro / Enterprise. Ошибки внутри уведомления не блокируют основной сценарий.
+    if previous_plan_id != payload.plan_id:
+        plan_name = str(plan["name"])
+        if plan_name.lower() in ("pro", "enterprise"):
+            send_new_plan_purchase_notification(
+                email=str(client["email"]),
+                plan_name=plan_name,
+                client_id=str(client["id"]),
+            )
+
     return {"message": "Plan updated", "plan_id": payload.plan_id}
 
 
@@ -729,6 +748,27 @@ def update_notifications(payload: NotificationsUpdateSchema, client: Dict[str, o
                 ),
             )
     return {"message": "Notifications updated"}
+
+
+# -----------------------------
+# Integrations: Telegram
+# -----------------------------
+
+
+@api_router.post(
+    "/integrations/telegram/test-message",
+    responses={403: {"description": "Доступ запрещён"}},
+)
+def telegram_test_message(
+    payload: TelegramTestMessageSchema,
+    _client: Dict[str, object] = Depends(require_admin),
+):
+    """
+    Служебный эндпоинт для проверки интеграции с Telegram.
+    Доступен только админам.
+    """
+    send_test_message(text=payload.text, chat_id=payload.chat_id)
+    return {"message": "Test message sent (if Telegram настроен корректно)"}
 
 
 app.include_router(api_router)
