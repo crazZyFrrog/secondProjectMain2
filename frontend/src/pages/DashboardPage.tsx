@@ -67,6 +67,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* How to start */}
+        <div className="mb-8 bg-white p-6 rounded-xl shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Как начать</h2>
+          <ol className="mt-2 space-y-1 text-gray-600 list-decimal list-inside">
+            <li>Создайте проект на основе подходящего шаблона.</li>
+            <li>Заполните разделы «О компании» и «Продукты/услуги» в редакторе.</li>
+            <li>Откройте превью и экспорт, чтобы получить готовый лендинг.</li>
+          </ol>
+        </div>
+
         {/* Create Project Button */}
         <div className="mb-8">
           <Link

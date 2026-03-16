@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useProjectStore } from '../store/projectStore'
 import { Eye, Download, Sparkles, Menu } from 'lucide-react'
 
-type Section = 'company' | 'products'
+type Section = 'company' | 'products' | 'contacts'
 
 export default function EditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -53,7 +53,8 @@ export default function EditorPage() {
 
   const sections: { id: Section; name: string }[] = [
     { id: 'company', name: 'О компании' },
-    { id: 'products', name: 'Продукты/Услуги' }
+    { id: 'products', name: 'Продукты/Услуги' },
+    { id: 'contacts', name: 'Контакты' }
   ]
 
   if (loading) {
@@ -231,6 +232,77 @@ export default function EditorPage() {
                 >
                   Сохранить изменения
                 </button>
+              </div>
+            )}
+
+            {/* Contacts Section */}
+            {activeSection === 'contacts' && (
+              <div className="bg-white rounded-xl shadow-sm p-8">
+                <h2 className="text-2xl font-bold mb-6">Контакты</h2>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Телефон
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.contacts?.phone || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          contacts: { ...formData.contacts, phone: e.target.value }
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="+7 (999) 123-45-67"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.contacts?.email || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          contacts: { ...formData.contacts, email: e.target.value }
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="contact@company.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Адрес
+                    </label>
+                    <textarea
+                      value={formData.contacts?.address || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          contacts: { ...formData.contacts, address: e.target.value }
+                        })
+                      }
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Город, улица, дом, офис"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSave}
+                    disabled={saveStatus === 'saving'}
+                    className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Сохранить изменения
+                  </button>
+                </div>
               </div>
             )}
           </div>
