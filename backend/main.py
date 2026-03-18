@@ -249,13 +249,24 @@ def register(payload: RegisterRequestSchema):
             ),
         )
 
-    # Отправляем уведомление о новой регистрации в Telegram
-    send_new_user_registration_notification(
-        email=payload.email.strip(),
-        username=payload.username.strip(),
-        company_type=payload.company_type,
-        client_id=client_id,
-    )
+    # Отправляем уведомление о новой регистрации в Telegram (неблокирующий режим)
+    import threading
+    def send_notification_async():
+        try:
+            send_new_user_registration_notification(
+                email=payload.email.strip(),
+                username=payload.username.strip(),
+                company_type=payload.company_type,
+                client_id=client_id,
+            )
+        except Exception as e:
+            # Логируем ошибку, но не прерываем регистрацию
+            print(f"Telegram notification error: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    thread = threading.Thread(target=send_notification_async, daemon=True)
+    thread.start()
 
     token = create_access_token(client_id)
     return {
@@ -332,17 +343,26 @@ def select_plan(payload: PlanSelectSchema, client: Dict[str, object] = Depends(g
             (payload.plan_id, client["id"]),
         )
 
-    # Отправляем уведомление в Telegram при переходе на Pro/Enterprise тариф
+    # Отправляем уведомление в Telegram при переходе на Pro/Enterprise тариф (неблокирующий режим)
     # Уведомление отправляется только при реальной смене тарифа или при первом выборе Pro/Enterprise
     if previous_plan_id != payload.plan_id:
         plan_name = str(plan["name"])
         # Проверяем, является ли новый тариф Pro или Enterprise
         if plan_name.lower() in ("pro", "enterprise"):
-            send_new_plan_purchase_notification(
-                email=str(client["email"]),
-                plan_name=plan_name,
-                client_id=str(client["id"]),
-            )
+            import threading
+            def send_notification_async():
+                try:
+                    send_new_plan_purchase_notification(
+                        email=str(client["email"]),
+                        plan_name=plan_name,
+                        client_id=str(client["id"]),
+                    )
+                except Exception as e:
+                    print(f"Telegram notification error: {e}"
+)
+            
+            thread = threading.Thread(target=send_notification_async, daemon=True)
+            thread.start()
 
     return {"message": "Plan updated", "plan_id": payload.plan_id}
 
