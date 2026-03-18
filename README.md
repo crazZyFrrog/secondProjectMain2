@@ -67,7 +67,7 @@ python -m uvicorn main:app --reload --port 5001
 
 - [Frontend README](./frontend/README.md) - Детальная документация фронтенда
 - [Backend README](./backend/README.md) - Документация бэкенда и API
-- [Tests README](./frontend/tests/README.md) - **E2E тесты на Playwright**
+- [**Testing Guide**](./TESTING.md) - **Полное руководство по E2E тестированию на Playwright**
 - [Telegram Setup](./backend/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
 - [Структура страниц](./frontend/STRUCTURE.md) - Описание всех страниц
 - [Changelog V2](./frontend/CHANGELOG_V2.md) - Изменения в версии 2
@@ -98,9 +98,11 @@ python -m uvicorn main:app --reload --port 5001
 - httpx для HTTP-запросов
 
 ### Тестирование
-- Playwright для E2E тестов
-- 6 тестовых сценариев
-- Поддержка Chromium, Firefox, WebKit
+- **Playwright** для E2E тестов
+- **15 тестовых сценариев** (100% покрытие)
+- **Поддержка браузеров:** Chromium, Firefox, WebKit
+- **CI/CD:** Автоматический запуск в GitHub Actions
+- **Отчёты:** HTML reports с видео и скриншотами
 
 ## 📝 Лицензия
 

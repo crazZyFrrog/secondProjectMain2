@@ -48,8 +48,9 @@ jobs:
     - name: Start Frontend
       working-directory: ./frontend
       run: |
+        npm install -g wait-on
         npm run dev &
-        npx wait-on http://localhost:5173 --timeout 60000
+        wait-on http://localhost:5173 --timeout 60000
     
     # Установка Playwright
     - name: Install Playwright Browsers

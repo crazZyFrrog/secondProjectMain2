@@ -262,9 +262,11 @@ def seed() -> None:
                 (token, client_id, now),
             )
 
+        # Добавляем дополнительных пользователей (админ, менеджер, тестовый пользователь для Playwright)
         for email, role, username, password in [
             ("admin@example.com", "admin", "Admin", "admin1234"),
             ("manager@example.com", "manager", "Manager", "manager1234"),
+            ("testforexample@example.com", "user", "Test User", "password1234"),
         ]:
             exists = conn.execute("SELECT 1 FROM clients WHERE email = ?", (email,)).fetchone()
             if not exists:
@@ -273,7 +275,7 @@ def seed() -> None:
                     INSERT INTO clients (id, company_type, username, email, password_hash, plan_id, role, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (str(uuid4()), "small", username, email, hash_password(password), None, role, now_iso()),
+                    (str(uuid4()), "small", username, email, hash_password(password), starter_id, role, now_iso()),
                 )
 
     print("Seed completed.")
