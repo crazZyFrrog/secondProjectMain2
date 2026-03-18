@@ -101,7 +101,6 @@ python -m uvicorn main:app --reload --port 5001
 - **Playwright** для E2E тестов
 - **15 тестовых сценариев** (100% покрытие)
 - **Поддержка браузеров:** Chromium, Firefox, WebKit
-- **CI/CD:** Автоматический запуск в GitHub Actions
 - **Отчёты:** HTML reports с видео и скриншотами
 
 ## 📝 Лицензия
