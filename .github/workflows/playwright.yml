@@ -30,21 +30,79 @@ jobs:
     - name: Start Backend
       working-directory: ./backend
       run: |
-        echo "Initializing database..."
-        python seed_db.py
-        echo "Database initialized"
+        echo "=== Initializing database ==="
+        python seed_db.py 2>&1 | tee seed_output.log
+        echo ""
+        echo "=== Database initialization complete ==="
+        echo "Database file check:"
         ls -la data/
-        echo "Starting backend server..."
-        python -m uvicorn main:app --port 5001 &
-        sleep 5
+        if [ -f "data/app.db" ]; then
+          echo "✓ app.db exists"
+          echo "Database size: $(du -h data/app.db)"
+        else
+          echo "✗ app.db NOT FOUND!"
+          exit 1
+        fi
+        echo ""
+        echo "=== Starting backend server ==="
+        nohup python -m uvicorn main:app --port 5001 > backend.log 2>&1 &
+        echo "Backend PID: $!"
+        sleep 8
+        echo ""
+        echo "=== Backend logs (first 50 lines) ==="
+        head -n 50 backend.log || echo "No logs yet"
         
     # Проверка доступности Backend
     - name: Check Backend
+      working-directory: ./backend
       run: |
-        echo "Waiting for backend to be ready..."
-        timeout 30 bash -c 'until curl -s http://localhost:5001/docs > /dev/null; do sleep 1; done'
-        echo "Backend is ready!"
-        curl -s http://localhost:5001/docs | head -n 20
+        echo "=== Waiting for backend to be ready ==="
+        timeout 30 bash -c 'until curl -s http://localhost:5001/docs > /dev/null; do echo "Waiting..."; sleep 2; done'
+        echo "✓ Backend is responding!"
+        echo ""
+        echo "=== Backend logs (updated) ==="
+        tail -n 100 backend.log
+        echo ""
+        echo "=== Testing API endpoints ==="
+        
+        # Test 1: Health check
+        echo "1. Testing /docs endpoint..."
+        curl -s http://localhost:5001/docs | head -n 5
+        
+        # Test 2: Login with test user
+        echo ""
+        echo "2. Testing /api/auth/login endpoint..."
+        LOGIN_RESPONSE=$(curl -s -X POST http://localhost:5001/api/auth/login \
+          -H "Content-Type: application/json" \
+          -d '{"email":"testforexample@example.com","password":"password1234"}')
+        echo "Response: $LOGIN_RESPONSE"
+        
+        if echo "$LOGIN_RESPONSE" | grep -q "error\|Error\|500"; then
+          echo "✗ Login endpoint returned an error!"
+          echo "Full backend logs:"
+          cat backend.log
+          exit 1
+        else
+          echo "✓ Login endpoint works!"
+        fi
+        
+        # Test 3: Check if test user exists
+        echo ""
+        echo "3. Checking database for test user..."
+        python -c "
+import sqlite3
+conn = sqlite3.connect('data/app.db')
+cursor = conn.cursor()
+cursor.execute('SELECT email, username, role FROM clients WHERE email = ?', ('testforexample@example.com',))
+user = cursor.fetchone()
+if user:
+    print(f'✓ Test user found: {user}')
+else:
+    print('✗ Test user NOT found in database!')
+    cursor.execute('SELECT email FROM clients LIMIT 5')
+    print('Available users:', cursor.fetchall())
+conn.close()
+"
     
     # Настройка Node.js для Frontend
     - name: Set up Node.js
@@ -69,11 +127,26 @@ jobs:
     # Проверка доступности серверов
     - name: Verify Servers
       run: |
-        echo "Checking Backend..."
-        curl -f http://localhost:5001/docs || exit 1
-        echo "Checking Frontend..."
-        curl -f http://localhost:5173 || exit 1
-        echo "All servers are running!"
+        echo "=== Final Server Verification ==="
+        echo "1. Backend health check..."
+        if curl -f -s http://localhost:5001/docs > /dev/null; then
+          echo "✓ Backend OK"
+        else
+          echo "✗ Backend FAILED"
+          cat backend/backend.log
+          exit 1
+        fi
+        
+        echo "2. Frontend health check..."
+        if curl -f -s http://localhost:5173 > /dev/null; then
+          echo "✓ Frontend OK"
+        else
+          echo "✗ Frontend FAILED"
+          exit 1
+        fi
+        
+        echo ""
+        echo "✓ All servers are ready for tests!"
     
     # Установка Playwright
     - name: Install Playwright Browsers
@@ -84,12 +157,21 @@ jobs:
     - name: Run Playwright tests
       working-directory: ./frontend
       run: |
-        echo "Node version: $(node --version)"
-        echo "NPM version: $(npm --version)"
-        echo "Playwright version: $(npx playwright --version)"
-        echo "Starting Playwright tests..."
-        npx playwright test --project=chromium --reporter=list,html
-        echo "Tests completed!"
+        echo "=== Environment Info ==="
+        echo "Node: $(node --version)"
+        echo "NPM: $(npm --version)"
+        echo "Playwright: $(npx playwright --version)"
+        echo "Working directory: $(pwd)"
+        echo ""
+        echo "=== Starting Playwright tests ==="
+        npx playwright test --project=chromium --reporter=list,html || {
+          echo ""
+          echo "=== Tests failed! Checking backend logs ==="
+          tail -n 200 ../backend/backend.log
+          exit 1
+        }
+        echo ""
+        echo "✓ All tests passed!"
     
     # Загрузка отчётов при падении
     - uses: actions/upload-artifact@v4

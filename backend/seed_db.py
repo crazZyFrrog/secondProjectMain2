@@ -263,6 +263,7 @@ def seed() -> None:
             )
 
         # Добавляем дополнительных пользователей (админ, менеджер, тестовый пользователь для Playwright)
+        print("\n=== Creating additional users ===")
         for email, role, username, password in [
             ("admin@example.com", "admin", "Admin", "admin1234"),
             ("manager@example.com", "manager", "Manager", "manager1234"),
@@ -270,15 +271,50 @@ def seed() -> None:
         ]:
             exists = conn.execute("SELECT 1 FROM clients WHERE email = ?", (email,)).fetchone()
             if not exists:
+                user_id = str(uuid4())
+                password_hash = hash_password(password)
                 conn.execute(
                     """
                     INSERT INTO clients (id, company_type, username, email, password_hash, plan_id, role, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (str(uuid4()), "small", username, email, hash_password(password), starter_id, role, now_iso()),
+                    (user_id, "small", username, email, password_hash, starter_id, role, now_iso()),
                 )
+                print(f"✓ Created user: {email} ({role})")
+                
+                # Verify the user was actually created
+                verification = conn.execute(
+                    "SELECT id, email, username, role FROM clients WHERE email = ?",
+                    (email,)
+                ).fetchone()
+                if verification:
+                    print(f"  └─ Verified: {verification['username']} ({verification['email']})")
+                else:
+                    print(f"  └─ ✗ WARNING: User {email} was NOT created!")
+            else:
+                print(f"• User already exists: {email}")
 
-    print("Seed completed.")
+    print("\n=== Verifying test user ===")
+    with get_connection() as conn:
+        test_user = conn.execute(
+            "SELECT id, email, username, role FROM clients WHERE email = ?",
+            ("testforexample@example.com",)
+        ).fetchone()
+        
+        if test_user:
+            print(f"✓ Test user found:")
+            print(f"  ID: {test_user['id']}")
+            print(f"  Email: {test_user['email']}")
+            print(f"  Username: {test_user['username']}")
+            print(f"  Role: {test_user['role']}")
+        else:
+            print("✗ ERROR: Test user NOT FOUND!")
+            print("Available users:")
+            all_users = conn.execute("SELECT email, username FROM clients").fetchall()
+            for user in all_users:
+                print(f"  - {user['email']} ({user['username']})")
+
+    print("\n✓ Seed completed.")
 
 
 if __name__ == "__main__":

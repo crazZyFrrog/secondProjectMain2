@@ -220,86 +220,121 @@ def get_project_limit(plan_id: Optional[str]) -> Optional[int]:
 
 @api_router.post("/auth/register", responses={400: {"description": "Ошибка валидации"}})
 def register(payload: RegisterRequestSchema):
-    with get_connection() as conn:
-        existing = conn.execute(
-            "SELECT 1 FROM clients WHERE email = ?",
-            (payload.email.strip(),),
-        ).fetchone()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={"message": "Email already registered"},
-            )
+    try:
+        with get_connection() as conn:
+            existing = conn.execute(
+                "SELECT 1 FROM clients WHERE email = ?",
+                (payload.email.strip(),),
+            ).fetchone()
+            if existing:
+                print(f"[REGISTER] Email already exists: {payload.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"message": "Email already registered"},
+                )
 
-        client_id = str(uuid4())
-        conn.execute(
-            """
-            INSERT INTO clients (id, company_type, username, email, password_hash, plan_id, role, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                client_id,
-                payload.company_type,
-                payload.username.strip(),
-                payload.email.strip(),
-                hash_password(payload.password),
-                None,
-                "user",
-                now_iso(),
-            ),
+            client_id = str(uuid4())
+            print(f"[REGISTER] Creating new user: {payload.email} ({payload.username})")
+            conn.execute(
+                """
+                INSERT INTO clients (id, company_type, username, email, password_hash, plan_id, role, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    client_id,
+                    payload.company_type,
+                    payload.username.strip(),
+                    payload.email.strip(),
+                    hash_password(payload.password),
+                    None,
+                    "user",
+                    now_iso(),
+                ),
+            )
+            print(f"[REGISTER] User created successfully: {client_id}")
+
+        # Отправляем уведомление о новой регистрации в Telegram (неблокирующий режим)
+        import threading
+        def send_notification_async():
+            try:
+                send_new_user_registration_notification(
+                    email=payload.email.strip(),
+                    username=payload.username.strip(),
+                    company_type=payload.company_type,
+                    client_id=client_id,
+                )
+            except Exception as e:
+                # Логируем ошибку, но не прерываем регистрацию
+                print(f"Telegram notification error: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        thread = threading.Thread(target=send_notification_async, daemon=True)
+        thread.start()
+
+        token = create_access_token(client_id)
+        return {
+            "id": client_id,
+            "company_type": payload.company_type,
+            "username": payload.username.strip(),
+            "email": payload.email.strip(),
+            "plan_id": None,
+            "role": "user",
+            "token": token,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[REGISTER] Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal server error", "error": str(e)},
         )
-
-    # Отправляем уведомление о новой регистрации в Telegram (неблокирующий режим)
-    import threading
-    def send_notification_async():
-        try:
-            send_new_user_registration_notification(
-                email=payload.email.strip(),
-                username=payload.username.strip(),
-                company_type=payload.company_type,
-                client_id=client_id,
-            )
-        except Exception as e:
-            # Логируем ошибку, но не прерываем регистрацию
-            print(f"Telegram notification error: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    thread = threading.Thread(target=send_notification_async, daemon=True)
-    thread.start()
-
-    token = create_access_token(client_id)
-    return {
-        "id": client_id,
-        "company_type": payload.company_type,
-        "username": payload.username.strip(),
-        "email": payload.email.strip(),
-        "plan_id": None,
-        "role": "user",
-        "token": token,
-    }
 
 
 @api_router.post("/auth/login", responses={400: {"description": "Ошибка валидации"}})
 def login(payload: LoginRequestSchema):
-    with get_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT id, password_hash
-            FROM clients
-            WHERE email = ?
-            """,
-            (payload.email.strip(),),
-        ).fetchone()
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT id, password_hash, username, email
+                FROM clients
+                WHERE email = ?
+                """,
+                (payload.email.strip(),),
+            ).fetchone()
 
-        if not row or not verify_password(payload.password, row["password_hash"]):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"message": "Invalid credentials"},
-            )
+            if not row:
+                print(f"[LOGIN] User not found: {payload.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={"message": "Invalid credentials"},
+                )
+            
+            if not verify_password(payload.password, row["password_hash"]):
+                print(f"[LOGIN] Invalid password for user: {payload.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={"message": "Invalid credentials"},
+                )
+            
+            print(f"[LOGIN] Success for user: {row['email']} ({row['username']})")
 
-    token = create_access_token(row["id"])
-    return {"token": token}
+        token = create_access_token(row["id"])
+        return {"token": token}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[LOGIN] Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal server error", "error": str(e)},
+        )
 
 
 @api_router.post("/auth/logout")
