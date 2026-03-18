@@ -54,7 +54,7 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 TELEGRAM_MANAGER_CHAT_ID=your_manager_chat_id_here
 ```
 
-**Важно:** Для получения токена бота и Chat ID смотрите инструкцию в файле [TELEGRAM_SETUP.md](./TELEGRAM_SETUP.md)
+**Важно:** Для получения токена бота и Chat ID смотрите инструкцию в файле [docs/TELEGRAM_SETUP.md](./docs/TELEGRAM_SETUP.md)
 
 ### 3. Инициализация базы данных
 

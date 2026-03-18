@@ -67,10 +67,11 @@ python -m uvicorn main:app --reload --port 5001
 
 - [Frontend README](./frontend/README.md) - Детальная документация фронтенда
 - [Backend README](./backend/README.md) - Документация бэкенда и API
-- [**Testing Guide**](./TESTING.md) - **Полное руководство по E2E тестированию на Playwright**
-- [Telegram Setup](./backend/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
-- [Структура страниц](./frontend/STRUCTURE.md) - Описание всех страниц
-- [Changelog V2](./frontend/CHANGELOG_V2.md) - Изменения в версии 2
+- [**Testing Guide**](./docs/testing/TESTING.md) - **Полное руководство по E2E тестированию на Playwright**
+- [Telegram Setup](./backend/docs/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
+- [Структура страниц](./frontend/docs/STRUCTURE.md) - Описание всех страниц
+- [Changelog V2](./frontend/docs/CHANGELOG_V2.md) - Изменения в версии 2
+- [Быстрый старт](./docs/overview/QUICK_START.md) - Пошаговое руководство по запуску
 
 ## 📱 Telegram-уведомления
 
@@ -79,7 +80,7 @@ python -m uvicorn main:app --reload --port 5001
 - 💎 При переходе на тариф Pro
 - 👑 При переходе на тариф Enterprise
 
-**Инструкция по настройке:** [backend/TELEGRAM_SETUP.md](./backend/TELEGRAM_SETUP.md)
+**Инструкция по настройке:** [backend/docs/TELEGRAM_SETUP.md](./backend/docs/TELEGRAM_SETUP.md)
 
 ## 🛠 Технологии
 
