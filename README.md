@@ -67,6 +67,7 @@ python -m uvicorn main:app --reload --port 5001
 
 - [Frontend README](./frontend/README.md) - Детальная документация фронтенда
 - [Backend README](./backend/README.md) - Документация бэкенда и API
+- [**🚀 DEPLOYMENT GUIDE**](./DEPLOYMENT.md) - **Полное руководство по деплою в продакшен**
 - [**Testing Guide**](./docs/testing/TESTING.md) - **Полное руководство по E2E тестированию на Playwright**
 - [Telegram Setup](./backend/docs/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
 - [Структура страниц](./frontend/docs/STRUCTURE.md) - Описание всех страниц
@@ -93,7 +94,7 @@ python -m uvicorn main:app --reload --port 5001
 
 ### Backend
 - FastAPI + Uvicorn
-- SQLite (локальный файл)
+- SQLite (локально) / PostgreSQL (продакшен)
 - JWT-токены для авторизации
 - Telegram Bot API для уведомлений
 - httpx для HTTP-запросов

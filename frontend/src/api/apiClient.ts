@@ -1,6 +1,9 @@
 import { useForbiddenStore } from '../store/forbiddenStore'
 
-const API_BASE_URL = '/api'
+// API Base URL Configuration
+// В разработке используется прокси Vite (/api -> http://localhost:5001/api)
+// В продакшене используется переменная окружения VITE_API_URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

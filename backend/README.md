@@ -1,60 +1,30 @@
 # Backend - Landing Constructor API
 
-Бэкенд для конструктора лендингов на FastAPI. Хранение данных — SQLite.
+FastAPI backend для конструктора лендингов с поддержкой PostgreSQL и SQLite.
 
-## Стек
-
-- **FastAPI** + **Uvicorn**
-- **SQLite** база данных
-- **JWT** авторизация
-- **Telegram Bot API** для уведомлений
-
-## Структура
-
-```
-backend/
-├── main.py                     # Главный файл с API endpoints
-├── auth.py                     # Аутентификация и авторизация
-├── db.py                       # Настройка БД SQLite
-├── seed_db.py                  # Заполнение БД тестовыми данными
-├── telegram_notifications.py   # Интеграция с Telegram
-├── rbac.py                     # Контроль доступа
-├── validation.py               # Схемы валидации Pydantic
-├── test_telegram.py            # Скрипт для тестирования Telegram
-├── TELEGRAM_SETUP.md           # Инструкция по настройке Telegram
-├── requirements.txt
-├── .env.example               # Пример файла окружения
-├── .env                       # Файл окружения (создать вручную)
-└── README.md
-```
-
-## Запуск
+## 🚀 Быстрый старт (локально)
 
 ### 1. Установка зависимостей
 
 ```bash
-cd backend
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux/Mac
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-### 2. Настройка переменных окружения
+### 2. Настройка окружения
 
-Создайте файл `.env` в папке `backend` на основе `.env.example`:
+Скопируйте `.env.example` в `.env` и настройте переменные:
 
-```env
-JWT_SECRET=your_random_secret_key_here
-JWT_ALGORITHM=HS256
-JWT_EXPIRES_MINUTES=120
-
-# Telegram bot integration
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-TELEGRAM_MANAGER_CHAT_ID=your_manager_chat_id_here
+```bash
+cp .env.example .env
 ```
 
-**Важно:** Для получения токена бота и Chat ID смотрите инструкцию в файле [docs/TELEGRAM_SETUP.md](./docs/TELEGRAM_SETUP.md)
+Для локальной разработки оставьте `DATABASE_URL` пустым (будет использоваться SQLite).
 
 ### 3. Инициализация базы данных
 
@@ -62,118 +32,211 @@ TELEGRAM_MANAGER_CHAT_ID=your_manager_chat_id_here
 python seed_db.py
 ```
 
-Это создаст файл базы данных `data/app.db` и заполнит её тестовыми данными.
-
 ### 4. Запуск сервера
 
 ```bash
 python -m uvicorn main:app --reload --port 5001
 ```
 
-Откройте документацию: http://localhost:5001/docs
+Откройте документацию API: http://localhost:5001/docs
 
-## Тестовые пользователи
+## 📦 Структура
 
-После запуска `seed_db.py` доступны следующие пользователи:
+```
+backend/
+├── main.py              # Главный файл приложения
+├── db.py                # Работа с БД (SQLite/PostgreSQL)
+├── auth.py              # JWT авторизация
+├── rbac.py              # Контроль доступа
+├── validation.py        # Валидация запросов
+├── telegram_notifications.py  # Telegram-уведомления
+├── seed_db.py           # Начальные данные
+├── requirements.txt     # Зависимости Python
+├── .env.example         # Пример конфигурации
+├── Dockerfile           # Docker для деплоя
+├── amvera.yml           # Конфиг для Amvera.io
+└── data/
+    └── app.db           # SQLite база (локально)
+```
 
-| Роль     | Email              | Пароль      |
-|----------|-------------------|-------------|
-| User     | demo@example.com  | demo1234    |
-| Manager  | manager@example.com| manager1234|
-| Admin    | admin@example.com | admin1234   |
+## 🌍 Деплой в продакшен
 
-## API Endpoints
+**Полное руководство**: [../DEPLOYMENT.md](../DEPLOYMENT.md)
 
-### Auth
-- `POST /api/auth/register` - Регистрация клиента
-- `POST /api/auth/login` - Вход (получение токена)
-- `POST /api/auth/logout` - Выход
+### Быстрый старт для популярных платформ:
 
-### Клиенты
-- `GET /api/clients/me` - Профиль текущего клиента
-- `PATCH /api/clients/me/plan` - Выбор тарифа
-- `PATCH /api/clients/me/password` - Смена пароля
-- `GET /api/clients/me/subscription` - Информация о подписке
-- `GET /api/clients/me/payments` - История платежей
-- `GET /api/clients/me/notifications` - Настройки уведомлений
-- `PATCH /api/clients/me/notifications` - Обновление настроек уведомлений
+#### Amvera.io (рекомендуется для РФ)
 
-### Тарифы
-- `GET /api/plans` - Список тарифов
-- `GET /api/plans/{plan_id}` - Детали тарифа
-- `POST /api/plans` - Создать тариф (только admin)
-- `PATCH /api/plans/{plan_id}` - Обновить тариф (только admin)
-- `DELETE /api/plans/{plan_id}` - Удалить тариф (только admin)
+1. Создайте PostgreSQL базу данных
+2. Настройте переменные окружения:
+   - `DATABASE_URL` - строка подключения к PostgreSQL
+   - `JWT_SECRET` - случайный ключ (32+ символа)
+   - `FRONTEND_URL` - URL вашего фронтенда
+3. Рабочая директория: `backend`
+4. Команда запуска: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 
-### Шаблоны
-- `GET /api/templates` - Список шаблонов
-- `GET /api/templates/{template_id}` - Детали шаблона
+#### Railway
 
-### Проекты
-- `GET /api/projects` - Список проектов
-- `POST /api/projects` - Создать проект
-- `GET /api/projects/{project_id}` - Получить проект
-- `PATCH /api/projects/{project_id}` - Обновить проект
-- `DELETE /api/projects/{project_id}` - Удалить проект
+1. Создайте PostgreSQL сервис
+2. Добавьте GitHub репозиторий
+3. Root Directory: `backend`
+4. Переменные: `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`
 
-### AI генерация
-- `POST /api/ai/generate` - Генерация контента для лендинга
-
-### Экспорт
-- `POST /api/projects/{project_id}/export` - Экспорт проекта
-- `GET /api/projects/{project_id}/exports` - История экспортов
-
-### Интеграции
-- `POST /api/integrations/telegram/test-message` - Отправка тестового сообщения в Telegram (только admin)
-
-## Telegram-уведомления
-
-### Когда отправляются уведомления?
-
-1. **При регистрации нового пользователя** - всегда
-2. **При переходе на Pro тариф** - когда пользователь выбирает тариф Pro
-3. **При переходе на Enterprise тариф** - когда пользователь выбирает тариф Enterprise
-
-### Настройка Telegram-бота
-
-Подробная инструкция по настройке Telegram-бота находится в файле [TELEGRAM_SETUP.md](./TELEGRAM_SETUP.md)
-
-### Тестирование Telegram-уведомлений
-
-Для проверки работы Telegram-уведомлений запустите скрипт:
+#### Docker
 
 ```bash
-python test_telegram.py
+docker build -t landing-backend .
+docker run -p 8000:8000 \
+  -e DATABASE_URL="postgresql://..." \
+  -e JWT_SECRET="..." \
+  -e FRONTEND_URL="https://..." \
+  landing-backend
 ```
 
-Этот скрипт отправит 4 тестовых сообщения в ваш Telegram.
+## 🔧 Переменные окружения
 
-## Примечания
+| Переменная | Обязательна | Описание |
+|------------|-------------|----------|
+| `DATABASE_URL` | Нет* | PostgreSQL connection string. Если пусто - SQLite |
+| `JWT_SECRET` | Да** | Секретный ключ для JWT токенов |
+| `JWT_ALGORITHM` | Нет | Алгоритм шифрования (по умолчанию: HS256) |
+| `JWT_EXPIRES_MINUTES` | Нет | Время жизни токена (по умолчанию: 120) |
+| `FRONTEND_URL` | Нет*** | URL фронтенда для CORS (по умолчанию: localhost:5173) |
+| `TELEGRAM_BOT_TOKEN` | Нет | Токен Telegram-бота для уведомлений |
+| `TELEGRAM_MANAGER_CHAT_ID` | Нет | ID чата для получения уведомлений |
 
-- Данные хранятся в SQLite базе данных `data/app.db`
-- Авторизация по `Authorization: Bearer <token>`
-- Все уведомления в Telegram отправляются асинхронно и не блокируют основной процесс
-- Ошибки при отправке уведомлений логируются, но не прерывают работу API
+\* Обязательна для продакшена  
+\*\* Обязательна для продакшена (для локальной разработки есть дефолтное значение)  
+\*\*\* Обязательна для продакшена
 
-## Разработка
+## 📝 API Endpoints
 
-### Добавление новых уведомлений
+### Публичные (без авторизации)
 
-Чтобы добавить новый тип уведомления в Telegram:
+- `POST /api/auth/register` - Регистрация
+- `POST /api/auth/login` - Вход
+- `GET /api/plans` - Список тарифов
+- `GET /api/templates` - Список шаблонов
 
-1. Откройте файл `telegram_notifications.py`
-2. Создайте новую функцию по аналогии с `send_new_user_registration_notification`
-3. Используйте `send_telegram_message()` для отправки сообщения
-4. Вызовите эту функцию в нужном месте в `main.py`
+### Защищённые (требуют JWT токен)
 
-### Логирование
+- `GET /api/clients/me` - Текущий пользователь
+- `GET /api/projects` - Список проектов
+- `POST /api/projects` - Создание проекта
+- `PATCH /api/projects/{id}` - Обновление проекта
+- `DELETE /api/projects/{id}` - Удаление проекта
+- `POST /api/ai/generate` - AI-генерация контента
+- `POST /api/projects/{id}/export` - Экспорт проекта
 
-Для просмотра логов Telegram-уведомлений настройте logging:
+Полная документация: `/docs` (Swagger UI)
 
-```python
-import logging
-logging.basicConfig(level=logging.INFO)
+## 🔐 Авторизация
+
+Backend использует JWT токены. Для авторизации добавьте заголовок:
+
+```
+Authorization: Bearer <your_jwt_token>
 ```
 
-Все запросы и ответы Telegram API логируются модулем `telegram_notifications`.
+Токен получается при логине/регистрации и имеет срок действия 2 часа.
 
+## 🗄 База данных
+
+### Локальная разработка (SQLite)
+
+База создаётся автоматически в `backend/data/app.db`.
+
+### Продакшен (PostgreSQL)
+
+1. Создайте базу данных на хостинге
+2. Получите connection string (формат: `postgresql://user:pass@host:5432/db`)
+3. Установите в переменную `DATABASE_URL`
+4. При первом запуске таблицы создадутся автоматически
+
+### Миграции
+
+Текущая версия не использует миграции (Alembic). Схема создаётся через `init_db()`.
+
+При изменении схемы:
+- **SQLite**: удалите `data/app.db` и перезапустите
+- **PostgreSQL**: выполните ALTER TABLE команды вручную или пересоздайте базу
+
+## 🧪 Тестирование
+
+```bash
+# E2E тесты (из корня проекта)
+cd frontend
+npm run test
+```
+
+## 📱 Telegram-уведомления
+
+Настройка: [docs/TELEGRAM_SETUP.md](./docs/TELEGRAM_SETUP.md)
+
+Уведомления отправляются при:
+- Регистрации нового пользователя
+- Покупке тарифа Pro/Enterprise
+
+## 🐛 Отладка
+
+### Логи
+
+Backend выводит логи в консоль:
+- Регистрации/логины
+- Ошибки при работе с БД
+- Ошибки отправки Telegram-уведомлений
+
+### Проверка БД
+
+SQLite:
+```bash
+sqlite3 data/app.db
+.tables
+SELECT * FROM clients;
+```
+
+PostgreSQL:
+```bash
+psql $DATABASE_URL
+\dt
+SELECT * FROM clients;
+```
+
+### Тестирование API
+
+```bash
+# Через curl
+curl http://localhost:5001/api/plans
+
+# Через httpie
+http http://localhost:5001/api/plans
+
+# Через Swagger UI
+# Откройте http://localhost:5001/docs
+```
+
+## 🔒 Безопасность
+
+### Продакшен чеклист:
+
+- [ ] Установлен сильный `JWT_SECRET` (32+ случайных символа)
+- [ ] `FRONTEND_URL` указывает на реальный домен (не *)
+- [ ] Переменные окружения не в репозитории
+- [ ] PostgreSQL вместо SQLite
+- [ ] HTTPS для API
+- [ ] Настроен rate limiting (если нужно)
+
+## 📚 Технологии
+
+- **FastAPI** - современный Python web framework
+- **Uvicorn** - ASGI сервер
+- **SQLite** / **PostgreSQL** - база данных
+- **psycopg2** - PostgreSQL adapter
+- **bcrypt** - хеширование паролей
+- **PyJWT** - JWT токены
+- **httpx** - HTTP клиент (для Telegram)
+- **python-dotenv** - загрузка .env файлов
+
+## 📄 Лицензия
+
+MIT

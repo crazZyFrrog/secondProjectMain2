@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -52,10 +53,20 @@ def http_exception_handler(_request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content=exc.detail if isinstance(exc.detail, dict) else {"detail": str(exc.detail)})
 api_router = APIRouter(prefix="/api")
 
+# CORS Configuration
+# Для локальной разработки используется localhost
+# Для продакшена нужно указать FRONTEND_URL в переменных окружения
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+allowed_origins = [FRONTEND_URL]
+
+# Если FRONTEND_URL содержит несколько URL (через запятую), разбиваем их
+if "," in FRONTEND_URL:
+    allowed_origins = [url.strip() for url in FRONTEND_URL.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
