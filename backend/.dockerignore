@@ -1,0 +1,16 @@
+# .dockerignore for backend
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+*.db
+*.sqlite3
+data/
+.git/
+.gitignore
+README.md
+docs/
+tests/
+.pytest_cache/

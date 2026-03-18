@@ -1,0 +1,25 @@
+# Amvera.io Configuration
+# This file is used by Amvera.io platform for deployment configuration
+
+# Runtime
+runtime: python
+
+# Python version
+python_version: 3.11
+
+# Entry point (working directory is backend/)
+start_command: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+# Build command
+build_command: pip install -r requirements.txt
+
+# Health check endpoint
+health_check: /
+
+# Environment variables (set via Amvera dashboard)
+# Required env vars:
+# - DATABASE_URL
+# - JWT_SECRET
+# - FRONTEND_URL
+# - TELEGRAM_BOT_TOKEN (optional)
+# - TELEGRAM_MANAGER_CHAT_ID (optional)
