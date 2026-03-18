@@ -89,20 +89,20 @@ jobs:
         # Test 3: Check if test user exists
         echo ""
         echo "3. Checking database for test user..."
-        python -c "
+        python -c '
 import sqlite3
-conn = sqlite3.connect('data/app.db')
+conn = sqlite3.connect("data/app.db")
 cursor = conn.cursor()
-cursor.execute('SELECT email, username, role FROM clients WHERE email = ?', ('testforexample@example.com',))
+cursor.execute("SELECT email, username, role FROM clients WHERE email = ?", ("testforexample@example.com",))
 user = cursor.fetchone()
 if user:
-    print(f'✓ Test user found: {user}')
+    print(f"✓ Test user found: {user}")
 else:
-    print('✗ Test user NOT found in database!')
-    cursor.execute('SELECT email FROM clients LIMIT 5')
-    print('Available users:', cursor.fetchall())
+    print("✗ Test user NOT found in database!")
+    cursor.execute("SELECT email FROM clients LIMIT 5")
+    print("Available users:", cursor.fetchall())
 conn.close()
-"
+'
     
     # Настройка Node.js для Frontend
     - name: Set up Node.js
