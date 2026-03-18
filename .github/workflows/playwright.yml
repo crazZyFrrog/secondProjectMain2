@@ -30,9 +30,21 @@ jobs:
     - name: Start Backend
       working-directory: ./backend
       run: |
+        echo "Initializing database..."
         python seed_db.py
+        echo "Database initialized"
+        ls -la data/
+        echo "Starting backend server..."
         python -m uvicorn main:app --port 5001 &
         sleep 5
+        
+    # Проверка доступности Backend
+    - name: Check Backend
+      run: |
+        echo "Waiting for backend to be ready..."
+        timeout 30 bash -c 'until curl -s http://localhost:5001/docs > /dev/null; do sleep 1; done'
+        echo "Backend is ready!"
+        curl -s http://localhost:5001/docs | head -n 20
     
     # Настройка Node.js для Frontend
     - name: Set up Node.js
@@ -50,7 +62,18 @@ jobs:
       run: |
         npm install -g wait-on
         npm run dev &
+        echo "Waiting for frontend to start..."
         wait-on http://localhost:5173 --timeout 60000
+        echo "Frontend is ready"
+        
+    # Проверка доступности серверов
+    - name: Verify Servers
+      run: |
+        echo "Checking Backend..."
+        curl -f http://localhost:5001/docs || exit 1
+        echo "Checking Frontend..."
+        curl -f http://localhost:5173 || exit 1
+        echo "All servers are running!"
     
     # Установка Playwright
     - name: Install Playwright Browsers
@@ -60,14 +83,20 @@ jobs:
     # Запуск тестов
     - name: Run Playwright tests
       working-directory: ./frontend
-      run: npx playwright test --project=chromium
+      run: |
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        echo "Playwright version: $(npx playwright --version)"
+        echo "Starting Playwright tests..."
+        npx playwright test --project=chromium --reporter=list,html
+        echo "Tests completed!"
     
     # Загрузка отчётов при падении
     - uses: actions/upload-artifact@v4
       if: always()
       with:
         name: playwright-report
-        path: playwright-report/
+        path: frontend/playwright-report/
         retention-days: 30
     
     # Загрузка скриншотов и видео при падении
@@ -75,5 +104,5 @@ jobs:
       if: failure()
       with:
         name: test-results
-        path: test-results/
+        path: frontend/test-results/
         retention-days: 7
