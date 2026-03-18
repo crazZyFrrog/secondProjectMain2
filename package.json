@@ -1,0 +1,16 @@
+{
+  "name": "landing-constructor-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing Constructor - Root package",
+  "scripts": {
+    "test": "cd frontend && npm test",
+    "test:headed": "cd frontend && npm run test:headed",
+    "test:ui": "cd frontend && npm run test:ui",
+    "test:debug": "cd frontend && npm run test:debug",
+    "test:report": "cd frontend && npm run test:report",
+    "install:all": "cd frontend && npm install && cd ../backend && pip install -r requirements.txt",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 5001"
+  }
+}

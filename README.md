@@ -56,6 +56,7 @@ python -m uvicorn main:app --reload --port 5001
 - ✅ Демонстрационный шаблон на главной
 - ✅ Улучшенная навигация профиля
 - ✅ **Telegram-уведомления о регистрациях и покупках тарифов**
+- ✅ **E2E тесты на Playwright**
 
 ### В разработке
 - 🔄 Реальная AI-генерация
@@ -66,6 +67,7 @@ python -m uvicorn main:app --reload --port 5001
 
 - [Frontend README](./frontend/README.md) - Детальная документация фронтенда
 - [Backend README](./backend/README.md) - Документация бэкенда и API
+- [Tests README](./frontend/tests/README.md) - **E2E тесты на Playwright**
 - [Telegram Setup](./backend/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
 - [Структура страниц](./frontend/STRUCTURE.md) - Описание всех страниц
 - [Changelog V2](./frontend/CHANGELOG_V2.md) - Изменения в версии 2
@@ -94,6 +96,11 @@ python -m uvicorn main:app --reload --port 5001
 - JWT-токены для авторизации
 - Telegram Bot API для уведомлений
 - httpx для HTTP-запросов
+
+### Тестирование
+- Playwright для E2E тестов
+- 6 тестовых сценариев
+- Поддержка Chromium, Firefox, WebKit
 
 ## 📝 Лицензия
 

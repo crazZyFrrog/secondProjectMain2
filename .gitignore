@@ -58,3 +58,16 @@ __pycache__/
 
 backend/.env
 
+####################################
+# Playwright тесты
+####################################
+
+# Результаты тестов
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Видео и скриншоты из тестов (опционально, можно оставить для CI)
+# test-results/**/*.png
+# test-results/**/*.webm
+
