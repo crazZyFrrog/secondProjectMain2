@@ -12,8 +12,8 @@ from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException, status
 
-from auth import get_current_user
-from db import get_connection
+from backend.auth import get_current_user
+from backend.db import get_connection
 
 # Роли по возрастанию прав (для проверки "не ниже")
 ROLE_ORDER = {"user": 0, "manager": 1, "admin": 2}
