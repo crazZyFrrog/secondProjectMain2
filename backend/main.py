@@ -12,11 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth import create_access_token, decode_token, get_current_user, hash_password, verify_password
-from db import get_connection, init_db
-from seed_db import seed
-from rbac import require_admin, get_project_or_403, filter_projects_by_access
-from validation import (
+from .auth import create_access_token, decode_token, get_current_user, hash_password, verify_password
+from .db import get_connection, init_db
+from .seed_db import seed
+from .rbac import require_admin, get_project_or_403, filter_projects_by_access
+from .validation import (
     validation_exception_handler,
     path_project_id,
     path_plan_id,
@@ -34,7 +34,7 @@ from validation import (
     PasswordUpdateSchema,
     TelegramTestMessageSchema,
 )
-from telegram_notifications import (
+from .telegram_notifications import (
     send_new_plan_purchase_notification,
     send_test_message,
     send_new_user_registration_notification,
