@@ -118,7 +118,13 @@ async def auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 init_db()
-seed()
+
+try:
+    seed()
+except Exception as e:
+    print(f"Seed error: {e}")
+    import traceback
+    traceback.print_exc()
 
 
 @app.get("/", include_in_schema=False)
