@@ -5,8 +5,8 @@ import secrets
 from datetime import datetime
 from uuid import uuid4
 
-from auth import hash_password
-from db import get_connection, init_db
+from backend.auth import hash_password
+from backend.db import get_connection, init_db
 
 
 def now_iso() -> str:

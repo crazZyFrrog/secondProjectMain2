@@ -9,7 +9,7 @@ import jwt
 from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
 
-from db import get_connection
+from backend.db import get_connection
 
 load_dotenv()
 

@@ -19,7 +19,7 @@ if sys.platform == 'win32':
 # Добавляем текущую директорию в путь для импорта модулей
 sys.path.insert(0, str(Path(__file__).parent))
 
-from telegram_notifications import (
+from backend.telegram_notifications import (
     send_test_message,
     send_new_user_registration_notification,
     send_new_plan_purchase_notification,
