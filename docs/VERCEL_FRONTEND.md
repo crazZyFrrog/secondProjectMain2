@@ -64,3 +64,4 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 1. В Vercel должен быть **Root Directory = `frontend`**. Корневого `vercel.json` в репозитории нет — конфиг только [`frontend/vercel.json`](../frontend/vercel.json). Команды **`cd frontend && …`** в **Settings → Build & Development** нужно **удалить** (Override), если вы когда-то задавали их вручную.
 2. Откройте **Build Logs** целиком (**View Raw**) — ищите **`Error`** / **`tsc` / `vite build`**.
 3. Задайте **`VITE_API_URL`** (см. п. 2); без неё сборка проходит, но прод ходит в относительный `/api`.
+4. Если в логах **`Permission denied`** на `node_modules/.bin/tsc`: в [`frontend/package.json`](../frontend/package.json) сборка идёт через **`node ./node_modules/typescript/lib/tsc.js`** и **`node ./node_modules/vite/bin/vite.js`**, без `.bin`-symlink.
