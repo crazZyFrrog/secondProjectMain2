@@ -44,6 +44,8 @@ export default defineConfig({
     },
   },
   build: {
+    // Без параллельных modulepreload на 4+ чанка — у части сетей HTTP/2 рвёт лишние потоки (net::ERR_CONNECTION_CLOSED).
+    modulePreload: false,
     // каталог относительно outDir (dist) — совпадает с дефолтом Vite
     assetsDir: 'assets',
     emptyOutDir: true,

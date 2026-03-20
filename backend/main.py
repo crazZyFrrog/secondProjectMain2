@@ -61,16 +61,28 @@ def http_exception_handler(_request: Request, exc: HTTPException):
 api_router = APIRouter(prefix="/api")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-allowed_origins = [url.strip() for url in FRONTEND_URL.split(",")]
+_origin_parts = [url.strip() for url in FRONTEND_URL.split(",") if url.strip()]
+allow_all = "*" in _origin_parts
+allowed_origins = [o for o in _origin_parts if o != "*"]
+# Превью и прод Vercel: каждый деплой даёт новый *.vercel.app — иначе «Failed to fetch» при тесте не с кастомного домена.
+# Отключить: ALLOW_VERCEL_APP_CORS=false
+_allow_vercel = os.getenv("ALLOW_VERCEL_APP_CORS", "true").lower() in ("1", "true", "yes")
+_vercel_regex = r"https://[a-zA-Z0-9][a-zA-Z0-9\-._]*\.vercel\.app"
 
-allow_all = "*" in allowed_origins
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"] if allow_all else allowed_origins,
-    allow_credentials=not allow_all,
+_cors_kw: dict = dict(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+if allow_all:
+    _cors_kw["allow_origins"] = ["*"]
+    _cors_kw["allow_credentials"] = False
+else:
+    _cors_kw["allow_origins"] = allowed_origins
+    _cors_kw["allow_credentials"] = True
+    if _allow_vercel:
+        _cors_kw["allow_origin_regex"] = _vercel_regex
+
+app.add_middleware(CORSMiddleware, **_cors_kw)
 
 PUBLIC_PATH_PREFIXES = (
     "/docs",
@@ -126,6 +138,10 @@ print(f"[STARTUP] Python {sys.version}", flush=True)
 print(f"[STARTUP] DATABASE_URL set: {bool(os.getenv('DATABASE_URL'))}", flush=True)
 print(f"[STARTUP] JWT_SECRET set: {bool(os.getenv('JWT_SECRET'))}", flush=True)
 print(f"[STARTUP] FRONTEND_URL: {os.getenv('FRONTEND_URL', 'not set')}", flush=True)
+print(
+    f"[STARTUP] CORS allow *.vercel.app: {_allow_vercel and not allow_all}",
+    flush=True,
+)
 print(
     "[STARTUP] Для доступа из браузера используйте публичный HTTPS-домен из "
     "«Настройки → Доменные имена» (бесплатный *.amvera.io). "
