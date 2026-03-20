@@ -54,7 +54,7 @@
 - ✅ `backend/Dockerfile` - Docker-образ для backend
 - ✅ `backend/.dockerignore` - исключения для Docker
 - ✅ `backend/amvera.yml` - конфигурация для Amvera.io
-- ✅ `vercel.json` - конфигурация для Vercel (frontend)
+- ✅ `frontend/vercel.json` - конфигурация для Vercel (Root Directory = `frontend`)
 - ✅ `railway.json` - конфигурация для Railway (backend)
 
 **Описание:**

@@ -16,11 +16,9 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 
 Так Vercel выполняет `npm install` и `npm run build` **внутри папки с Vite**, без `cd frontend` — меньше сбоев на новых версиях CLI.
 
-### Вариант B: корень = весь монорепо
+### Вариант B (не используется в репозитории)
 
-1. **Root Directory** оставить **`.`** (корень репозитория).
-2. Используется корневой [`vercel.json`](../vercel.json): **`installCommand`** ставит зависимости в `frontend/`, затем **`buildCommand`** собирает проект, **`outputDirectory`**: `frontend/dist`.
-3. Framework Preset: **Other** (или оставить авто).
+Раньше в корне был `vercel.json` с `cd frontend && …`. При **Root Directory = `frontend`** это ломало сборку (`cd frontend: No such file or directory`). Сейчас корневого `vercel.json` **нет** — задайте в Vercel **Root Directory = `frontend`** (вариант A).
 
 ## 2. Переменная окружения (обязательно)
 
@@ -61,11 +59,8 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 2. `cd frontend && npm run verify:prod` (или из корня: `npm run verify:frontend`)
 3. Открыть **http://localhost:4173** и проверить API / CORS / логин
 
-## 6. Лог обрывается после «Installing dependencies» / нет Deployment Summary
+## 6. Лог обрывается / `cd frontend: No such file or directory`
 
-Частые причины:
-
-1. **Не задан `installCommand` для монорепо** (исправлено в корневом `vercel.json`) — до `frontend` не доходили зависимости для Vite/TypeScript. Закоммитьте актуальный репозиторий и сделайте **Redeploy**.
-2. **Удобнее включить Root Directory = `frontend`** (вариант A выше) — тогда используется `frontend/vercel.json` и стандартный пайплайн Vite.
-3. Откройте **Build Logs** целиком (прокрутка / **View Raw**) — строки с **`Error`** или падение **`tsc` / `vite build`** обычно ниже блока `Installing dependencies`.
-4. Убедитесь, что задан **`VITE_API_URL`** (см. п. 2); без неё сборка всё равно должна проходить, но прод будет бить в относительный `/api`.
+1. В Vercel должен быть **Root Directory = `frontend`**. Корневого `vercel.json` в репозитории нет — конфиг только [`frontend/vercel.json`](../frontend/vercel.json). Команды **`cd frontend && …`** в **Settings → Build & Development** нужно **удалить** (Override), если вы когда-то задавали их вручную.
+2. Откройте **Build Logs** целиком (**View Raw**) — ищите **`Error`** / **`tsc` / `vite build`**.
+3. Задайте **`VITE_API_URL`** (см. п. 2); без неё сборка проходит, но прод ходит в относительный `/api`.
