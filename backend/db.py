@@ -31,9 +31,17 @@ class DatabaseConnection:
             self._cursor = self.conn.cursor()
         return self._cursor
     
+    def _convert_query(self, query):
+        """Конвертирует ? в %s для PostgreSQL"""
+        if self.is_postgres and '?' in query:
+            # Заменяем ? на %s для PostgreSQL
+            return query.replace('?', '%s')
+        return query
+    
     def execute(self, query, params=None):
         """Выполняет SQL запрос (совместимость с SQLite стилем)"""
         cursor = self.cursor()
+        query = self._convert_query(query)
         if params:
             cursor.execute(query, params)
         else:
@@ -43,6 +51,7 @@ class DatabaseConnection:
     def executemany(self, query, params_list):
         """Выполняет множественный INSERT"""
         cursor = self.cursor()
+        query = self._convert_query(query)
         cursor.executemany(query, params_list)
         return cursor
     
