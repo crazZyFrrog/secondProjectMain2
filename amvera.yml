@@ -1,12 +1,9 @@
 meta:
-  environment: python
+  environment: docker
   toolchain:
-    name: pip
-    version: "3.11"
+    name: docker
 build:
-  requirementsPath: backend/requirements.txt
-  useCache: true
+  dockerfile: Dockerfile
 run:
-  command: python -m uvicorn backend.main:app --host 0.0.0.0 --port 80
   persistenceMount: /data
   containerPort: "80"
