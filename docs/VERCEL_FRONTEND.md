@@ -73,6 +73,7 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 3. В **Build & Development** не должно быть **Output Directory** не равного **`dist`** (при Root Directory = `frontend`).
 4. В **Vercel → Settings → Rewrites** не добавляйте правило, которое отдаёт `index.html` вместо файлов из **`/assets/*`** (статика обычно имеет приоритет, но кастомные правила стоит проверить).
 5. После правок `vite.config.ts`: локально `npm run build`, затем push и **Redeploy**; в Vercel задайте **`VITE_API_URL`** для API (на `base` не влияет).
+6. **HTML 304, CSS 200, а `index-*.js` вечно «Ожидание»:** это **не** из‑за `FRONTEND_URL` на Amvera (он влияет только на заголовки CORS у **API**, не на раздачу файлов с Vercel). В сборке по умолчанию Vite вставляет в `index.html` атрибут **`crossorigin`** у `<script type="module">`; у части сетей/браузеров это даёт зависание загрузки модуля при том, что обычный CSS без того же режима открывается быстро. В проекте при сборке **`crossorigin` убирается** (плагин в [`frontend/vite.config.ts`](../frontend/vite.config.ts)), а для `/assets/*` в [`frontend/vercel.json`](../frontend/vercel.json) заданы **`Access-Control-Allow-Origin: *`** и **`Cross-Origin-Resource-Policy: cross-origin`**. После push — **Redeploy** на Vercel.
 
 ## 8. `net::ERR_HTTP2_PING_FAILED` и долгая загрузка JS (~50 с)
 

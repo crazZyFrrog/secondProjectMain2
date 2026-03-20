@@ -19,8 +19,21 @@ function publicBase(): string {
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`
 }
 
+/** Убирает crossorigin из production index.html: иначе module-скрипт грузится в «CORS-режиме»,
+ *  и при цепочке CDN/провайдера иногда зависает в «Ожидание», тогда как CSS без того же механизма открывается. */
+function stripCrossoriginFromHtml(): import('vite').Plugin {
+  return {
+    name: 'strip-crossorigin-html',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      return html.replace(/\s+crossorigin(?:=["'][^"']*["'])?/gi, '')
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), stripCrossoriginFromHtml()],
   base: publicBase(),
   server: {
     proxy: {
