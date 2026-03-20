@@ -11,6 +11,7 @@
     "test:report": "cd frontend && npm run test:report",
     "install:all": "cd frontend && npm install && cd ../backend && pip install -r requirements.txt",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 5001"
+    "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 5001",
+    "verify:frontend": "cd frontend && npm run verify:prod"
   }
 }

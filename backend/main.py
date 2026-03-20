@@ -87,6 +87,9 @@ PUBLIC_PATH_PREFIXES = (
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
     print(f"[HTTP] {request.method} {path}", flush=True)
+    # CORS preflight: без Bearer; иначе браузер блокирует PATCH/DELETE с кросс-домена ("Failed to fetch")
+    if request.method == "OPTIONS":
+        return await call_next(request)
     if path == "/":
         return await call_next(request)
     if path.startswith("/api") and not any(path.startswith(prefix) for prefix in PUBLIC_PATH_PREFIXES):
