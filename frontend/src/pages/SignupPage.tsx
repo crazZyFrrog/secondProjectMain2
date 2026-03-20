@@ -13,6 +13,7 @@ type FieldErrors = Partial<{
   password: string
   confirmPassword: string
   agreed: string
+  companyType: string
 }>
 
 export default function SignupPage() {
@@ -90,7 +91,7 @@ export default function SignupPage() {
         if (apiFieldErrors.email) mapped.email = apiFieldErrors.email
         if (apiFieldErrors.password) mapped.password = apiFieldErrors.password
         if (apiFieldErrors.confirm_password) mapped.confirmPassword = apiFieldErrors.confirm_password
-        if (apiFieldErrors.company_type) mapped.plan = apiFieldErrors.company_type
+        if (apiFieldErrors.company_type) mapped.companyType = apiFieldErrors.company_type
         if (apiFieldErrors.accept_terms || apiFieldErrors.accept_privacy) {
           mapped.agreed = apiFieldErrors.accept_terms || apiFieldErrors.accept_privacy
         }
@@ -217,6 +218,9 @@ export default function SignupPage() {
             </div>
             {fieldErrors.agreed && (
               <p className="text-sm text-red-600">{fieldErrors.agreed}</p>
+            )}
+            {fieldErrors.companyType && (
+              <p className="text-sm text-red-600">{fieldErrors.companyType}</p>
             )}
 
             {authError && (

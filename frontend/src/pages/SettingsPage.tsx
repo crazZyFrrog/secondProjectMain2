@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import Header from '../components/Header'
 import { useAuthStore } from '../store/authStore'
 import { User, Lock, CreditCard, Bell, Crown } from 'lucide-react'
