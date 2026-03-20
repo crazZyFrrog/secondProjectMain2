@@ -6,4 +6,6 @@ build:
   dockerfile: Dockerfile
 run:
   persistenceMount: /data
-  containerPort: "80"
+  # Порт процесса в контейнере и порт сервиса должны совпадать с тем, на чём слушает uvicorn (см. Dockerfile).
+  containerPort: 80
+  servicePort: 80
