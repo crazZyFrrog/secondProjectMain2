@@ -69,8 +69,11 @@ allowed_origins = [o for o in _origin_parts if o != "*"]
 _allow_vercel = os.getenv("ALLOW_VERCEL_APP_CORS", "true").lower() in ("1", "true", "yes")
 _vercel_regex = r"https://[a-zA-Z0-9][a-zA-Z0-9\-._]*\.vercel\.app"
 
+# Явный список методов (не ["*"]): часть прокси/старого ПО криво обрабатывает wildcard в preflight.
+_CORS_ALLOW_METHODS = ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT")
+
 _cors_kw: dict = dict(
-    allow_methods=["*"],
+    allow_methods=_CORS_ALLOW_METHODS,
     allow_headers=["*"],
 )
 if allow_all:
@@ -81,8 +84,6 @@ else:
     _cors_kw["allow_credentials"] = True
     if _allow_vercel:
         _cors_kw["allow_origin_regex"] = _vercel_regex
-
-app.add_middleware(CORSMiddleware, **_cors_kw)
 
 PUBLIC_PATH_PREFIXES = (
     "/docs",
@@ -133,6 +134,11 @@ async def auth_middleware(request: Request, call_next):
             )
         request.state.client = dict(row)
     return await call_next(request)
+
+
+# CORS — регистрировать ПОСЛЕ auth_middleware: в Starlette последний add_middleware = внешний слой,
+# тогда OPTIONS/preflight обрабатывает CORSMiddleware первым (иначе браузер видит неверный Allow-Methods).
+app.add_middleware(CORSMiddleware, **_cors_kw)
 
 print(f"[STARTUP] Python {sys.version}", flush=True)
 print(f"[STARTUP] DATABASE_URL set: {bool(os.getenv('DATABASE_URL'))}", flush=True)
