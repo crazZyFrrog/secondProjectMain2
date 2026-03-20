@@ -86,6 +86,7 @@ PUBLIC_PATH_PREFIXES = (
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
+    print(f"[HTTP] {request.method} {path}", flush=True)
     if path == "/":
         return await call_next(request)
     if path.startswith("/api") and not any(path.startswith(prefix) for prefix in PUBLIC_PATH_PREFIXES):
@@ -122,6 +123,12 @@ print(f"[STARTUP] Python {sys.version}", flush=True)
 print(f"[STARTUP] DATABASE_URL set: {bool(os.getenv('DATABASE_URL'))}", flush=True)
 print(f"[STARTUP] JWT_SECRET set: {bool(os.getenv('JWT_SECRET'))}", flush=True)
 print(f"[STARTUP] FRONTEND_URL: {os.getenv('FRONTEND_URL', 'not set')}", flush=True)
+print(
+    "[STARTUP] Для доступа из браузера используйте публичный HTTPS-домен из "
+    "«Настройки → Доменные имена» (бесплатный *.amvera.io). "
+    "Имя вида amvera-*-run-* — внутреннее, с интернета часто даёт 404.",
+    flush=True,
+)
 
 MAX_DB_RETRIES = 10
 RETRY_DELAY = 3
@@ -155,6 +162,11 @@ print("[STARTUP] Application ready, listening for requests", flush=True)
 @app.get("/")
 def root():
     return {"message": "API работает"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 # -----------------------------
 # Helpers
