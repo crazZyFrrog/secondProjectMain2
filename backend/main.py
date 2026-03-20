@@ -42,7 +42,12 @@ from backend.telegram_notifications import (
     send_new_user_registration_notification,
 )
 
-app = FastAPI(title="Landing Constructor API")
+app = FastAPI(
+    title="Landing Constructor API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 
@@ -147,9 +152,9 @@ except Exception as e:
 print("[STARTUP] Application ready, listening for requests", flush=True)
 
 
-@app.get("/", include_in_schema=False)
+@app.get("/")
 def root():
-    return {"message": "API работает. Откройте /docs для документации."}
+    return {"message": "API работает"}
 
 # -----------------------------
 # Helpers

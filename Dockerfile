@@ -14,4 +14,5 @@ COPY backend/ ./backend/
 
 EXPOSE 80
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "80"]
+ENV PORT=80
+CMD ["sh", "-c", "exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-80}"]
