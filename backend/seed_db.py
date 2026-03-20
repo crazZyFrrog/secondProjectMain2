@@ -16,20 +16,14 @@ def now_iso() -> str:
 def seed() -> None:
     init_db()
     with get_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Проверка количества записей
-        cursor.execute("SELECT COUNT(1) AS cnt FROM plans")
-        result = cursor.fetchone()
-        plans_count = result[0] if isinstance(result, tuple) else result.get('cnt', 0) if isinstance(result, dict) else 0
-        
-        cursor.execute("SELECT COUNT(1) AS cnt FROM templates")
-        result = cursor.fetchone()
-        templates_count = result[0] if isinstance(result, tuple) else result.get('cnt', 0) if isinstance(result, dict) else 0
-        
-        cursor.execute("SELECT COUNT(1) AS cnt FROM clients")
-        result = cursor.fetchone()
-        clients_count = result[0] if isinstance(result, tuple) else result.get('cnt', 0) if isinstance(result, dict) else 0
+        def _count(row):
+            if isinstance(row, dict):
+                return row.get('cnt', 0)
+            return row[0] if row else 0
+
+        plans_count = _count(conn.execute("SELECT COUNT(1) AS cnt FROM plans").fetchone())
+        templates_count = _count(conn.execute("SELECT COUNT(1) AS cnt FROM templates").fetchone())
+        clients_count = _count(conn.execute("SELECT COUNT(1) AS cnt FROM clients").fetchone())
 
         if plans_count == 0:
             starter_id = str(uuid4())
@@ -69,11 +63,14 @@ def seed() -> None:
                 ),
             )
         else:
-            starter_id = cursor.execute(
+            row = conn.execute(
                 "SELECT id FROM plans WHERE name = ?",
                 ("Starter",),
             ).fetchone()
-            starter_id = starter_id[0] if starter_id else None
+            if row:
+                starter_id = row['id'] if isinstance(row, dict) else row[0]
+            else:
+                starter_id = None
 
         if templates_count == 0:
             templates = [
@@ -273,79 +270,39 @@ def seed() -> None:
                 (token, client_id, now),
             )
 
-        # Добавляем дополнительных пользователей (админ, менеджер, тестовый пользователь для Playwright)
         print("\n=== Creating additional users ===")
         for email, role, username, password in [
             ("admin@example.com", "admin", "Admin", "admin1234"),
             ("manager@example.com", "manager", "Manager", "manager1234"),
             ("testforexample@example.com", "user", "Test User", "password1234"),
         ]:
-            cursor.execute("SELECT 1 FROM clients WHERE email = ?", (email,))
-            exists = cursor.fetchone()
+            exists = conn.execute("SELECT 1 FROM clients WHERE email = ?", (email,)).fetchone()
             if not exists:
                 user_id = str(uuid4())
                 password_hash = hash_password(password)
-                cursor.execute(
+                conn.execute(
                     """
                     INSERT INTO clients (id, company_type, username, email, password_hash, plan_id, role, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (user_id, "small", username, email, password_hash, starter_id, role, now_iso()),
                 )
-                print(f"✓ Created user: {email} ({role})")
-                
-                # Verify the user was actually created
-                cursor.execute(
-                    "SELECT id, email, username, role FROM clients WHERE email = ?",
-                    (email,)
-                )
-                verification = cursor.fetchone()
-                if verification:
-                    # PostgreSQL returns tuple, SQLite returns Row - handle both
-                    user_data = verification if isinstance(verification, dict) else {
-                        'id': verification[0],
-                        'email': verification[1],
-                        'username': verification[2],
-                        'role': verification[3]
-                    }
-                    print(f"  └─ Verified: {user_data.get('username', verification[2])} ({user_data.get('email', verification[1])})")
-                else:
-                    print(f"  └─ ✗ WARNING: User {email} was NOT created!")
+                print(f"Created user: {email} ({role})")
             else:
-                print(f"• User already exists: {email}")
+                print(f"User already exists: {email}")
 
     print("\n=== Verifying test user ===")
     with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
+        test_user = conn.execute(
             "SELECT id, email, username, role FROM clients WHERE email = ?",
-            ("testforexample@example.com",)
-        )
-        test_user = cursor.fetchone()
-        
+            ("testforexample@example.com",),
+        ).fetchone()
+
         if test_user:
-            # PostgreSQL returns tuple, handle both tuple and dict
-            user_data = test_user if isinstance(test_user, dict) else {
-                'id': test_user[0],
-                'email': test_user[1],
-                'username': test_user[2],
-                'role': test_user[3]
-            }
-            print(f"✓ Test user found:")
-            print(f"  ID: {user_data.get('id', test_user[0])}")
-            print(f"  Email: {user_data.get('email', test_user[1])}")
-            print(f"  Username: {user_data.get('username', test_user[2])}")
-            print(f"  Role: {user_data.get('role', test_user[3])}")
+            user_data = dict(test_user) if not isinstance(test_user, dict) else test_user
+            print(f"Test user found: {user_data.get('email')} ({user_data.get('role')})")
         else:
-            print("✗ ERROR: Test user NOT FOUND!")
-            print("Available users:")
-            cursor.execute("SELECT email, username FROM clients")
-            all_users = cursor.fetchall()
-            for user in all_users:
-                if isinstance(user, dict):
-                    print(f"  - {user['email']} ({user['username']})")
-                else:
-                    print(f"  - {user[0]} ({user[1]})")
+            print("WARNING: Test user NOT FOUND!")
 
     print("\n✓ Seed completed.")
 
