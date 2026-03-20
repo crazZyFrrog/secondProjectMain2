@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -53,20 +55,14 @@ def http_exception_handler(_request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content=exc.detail if isinstance(exc.detail, dict) else {"detail": str(exc.detail)})
 api_router = APIRouter(prefix="/api")
 
-# CORS Configuration
-# Для локальной разработки используется localhost
-# Для продакшена нужно указать FRONTEND_URL в переменных окружения
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-allowed_origins = [FRONTEND_URL]
+allowed_origins = [url.strip() for url in FRONTEND_URL.split(",")]
 
-# Если FRONTEND_URL содержит несколько URL (через запятую), разбиваем их
-if "," in FRONTEND_URL:
-    allowed_origins = [url.strip() for url in FRONTEND_URL.split(",")]
-
+allow_all = "*" in allowed_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else allowed_origins,
+    allow_credentials=not allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -117,14 +113,38 @@ async def auth_middleware(request: Request, call_next):
         request.state.client = dict(row)
     return await call_next(request)
 
-init_db()
+print(f"[STARTUP] Python {sys.version}", flush=True)
+print(f"[STARTUP] DATABASE_URL set: {bool(os.getenv('DATABASE_URL'))}", flush=True)
+print(f"[STARTUP] JWT_SECRET set: {bool(os.getenv('JWT_SECRET'))}", flush=True)
+print(f"[STARTUP] FRONTEND_URL: {os.getenv('FRONTEND_URL', 'not set')}", flush=True)
+
+MAX_DB_RETRIES = 10
+RETRY_DELAY = 3
+
+for attempt in range(1, MAX_DB_RETRIES + 1):
+    try:
+        print(f"[STARTUP] Connecting to database (attempt {attempt}/{MAX_DB_RETRIES})...", flush=True)
+        init_db()
+        print("[STARTUP] Database initialized successfully", flush=True)
+        break
+    except Exception as e:
+        print(f"[STARTUP] Database init failed (attempt {attempt}): {e}", flush=True)
+        if attempt == MAX_DB_RETRIES:
+            print("[STARTUP] FATAL: Could not connect to database after all retries", flush=True)
+            import traceback
+            traceback.print_exc()
+        else:
+            time.sleep(RETRY_DELAY)
 
 try:
     seed()
+    print("[STARTUP] Seed completed successfully", flush=True)
 except Exception as e:
-    print(f"Seed error: {e}")
+    print(f"[STARTUP] Seed error (non-fatal): {e}", flush=True)
     import traceback
     traceback.print_exc()
+
+print("[STARTUP] Application ready, listening for requests", flush=True)
 
 
 @app.get("/", include_in_schema=False)
