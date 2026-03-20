@@ -20,13 +20,16 @@ def seed() -> None:
         
         # Проверка количества записей
         cursor.execute("SELECT COUNT(1) AS cnt FROM plans")
-        plans_count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        plans_count = result[0] if isinstance(result, tuple) else result.get('cnt', 0) if isinstance(result, dict) else 0
         
         cursor.execute("SELECT COUNT(1) AS cnt FROM templates")
-        templates_count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        templates_count = result[0] if isinstance(result, tuple) else result.get('cnt', 0) if isinstance(result, dict) else 0
         
         cursor.execute("SELECT COUNT(1) AS cnt FROM clients")
-        clients_count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        clients_count = result[0] if isinstance(result, tuple) else result.get('cnt', 0) if isinstance(result, dict) else 0
 
         if plans_count == 0:
             starter_id = str(uuid4())
