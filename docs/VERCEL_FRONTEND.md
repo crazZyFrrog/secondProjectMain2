@@ -45,6 +45,8 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 
 После смены переменных Amvera — перезапуск приложения.
 
+**CORS + PATCH после регистрации:** фронт вызывает `PATCH /api/clients/me/plan`. Preflight `OPTIONS` должен отвечать с `Access-Control-Allow-Methods`, включающим **PATCH**. В [`backend/main.py`](../backend/main.py) методы заданы явно, а **CORSMiddleware** подключается **после** `auth_middleware`, чтобы preflight обрабатывался первым слоем.
+
 ## 4. Как убедиться, что «можно деплоить»
 
 1. Деплой на Vercel завершился без ошибок сборки.
