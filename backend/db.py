@@ -17,7 +17,74 @@ DB_PATH = Path(__file__).resolve().parent / "data" / "app.db"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 
-def get_connection() -> Union[sqlite3.Connection, 'psycopg2.extensions.connection']:
+class DatabaseConnection:
+    """Универсальная обёртка для SQLite и PostgreSQL"""
+    
+    def __init__(self, conn):
+        self.conn = conn
+        self.is_postgres = hasattr(conn, 'cursor') and not isinstance(conn, sqlite3.Connection)
+        self._cursor = None
+    
+    def cursor(self):
+        """Возвращает курсор"""
+        if self._cursor is None:
+            self._cursor = self.conn.cursor()
+        return self._cursor
+    
+    def execute(self, query, params=None):
+        """Выполняет SQL запрос (совместимость с SQLite стилем)"""
+        cursor = self.cursor()
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+        return cursor
+    
+    def executemany(self, query, params_list):
+        """Выполняет множественный INSERT"""
+        cursor = self.cursor()
+        cursor.executemany(query, params_list)
+        return cursor
+    
+    def executescript(self, script):
+        """Выполняет SQL скрипт (только для SQLite)"""
+        if self.is_postgres:
+            # Для PostgreSQL разбиваем скрипт и выполняем по частям
+            cursor = self.cursor()
+            for statement in script.split(';'):
+                statement = statement.strip()
+                if statement:
+                    cursor.execute(statement)
+        else:
+            self.conn.executescript(script)
+        return self.cursor()
+    
+    def commit(self):
+        """Коммитит транзакцию"""
+        self.conn.commit()
+    
+    def rollback(self):
+        """Откатывает транзакцию"""
+        self.conn.rollback()
+    
+    def close(self):
+        """Закрывает соединение"""
+        if self._cursor:
+            self._cursor.close()
+        self.conn.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.rollback()
+        else:
+            self.commit()
+        self.close()
+
+
+def get_connection() -> DatabaseConnection:
     """
     Возвращает подключение к базе данных.
     Если задана переменная DATABASE_URL с postgresql://, использует PostgreSQL.
@@ -27,17 +94,16 @@ def get_connection() -> Union[sqlite3.Connection, 'psycopg2.extensions.connectio
         if not POSTGRES_AVAILABLE:
             raise ImportError("psycopg2 not installed. Run: pip install psycopg2-binary")
         
-        # psycopg2 автоматически закроет соединение при выходе из контекста
         conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
         conn.autocommit = False
-        return conn
+        return DatabaseConnection(conn)
     else:
         # SQLite для локальной разработки
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(DB_PATH))
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+        return DatabaseConnection(conn)
 
 
 def init_db() -> None:
