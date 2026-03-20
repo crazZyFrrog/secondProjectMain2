@@ -65,3 +65,11 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 2. Откройте **Build Logs** целиком (**View Raw**) — ищите **`Error`** / **`tsc` / `vite build`**.
 3. Задайте **`VITE_API_URL`** (см. п. 2); без неё сборка проходит, но прод ходит в относительный `/api`.
 4. Если в логах **`Permission denied`** на `node_modules/.bin/tsc`: в [`frontend/package.json`](../frontend/package.json) сборка идёт через **`node ./node_modules/typescript/lib/tsc.js`** и **`node ./node_modules/vite/bin/vite.js`**, без `.bin`-symlink.
+
+## 7. Кастомный домен: JS/CSS «висят» в Network (Pending)
+
+1. В [`frontend/vite.config.ts`](../frontend/vite.config.ts) для корня сайта задано **`base: '/'`** (или через `VITE_BASE_PATH`, см. комментарии в файле). Иначе пути к чанкам могут указывать не туда.
+2. В **Vercel → Domains** домен в статусе **Valid**; откройте сайт с тем же хостом, что привязан (с `www` или без — как настроили редирект).
+3. В **Build & Development** не должно быть **Output Directory** не равного **`dist`** (при Root Directory = `frontend`).
+4. В **Vercel → Settings → Rewrites** не добавляйте правило, которое отдаёт `index.html` вместо файлов из **`/assets/*`** (статика обычно имеет приоритет, но кастомные правила стоит проверить).
+5. После правок `vite.config.ts`: локально `npm run build`, затем push и **Redeploy**; в Vercel задайте **`VITE_API_URL`** для API (на `base` не влияет).
