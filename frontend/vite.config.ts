@@ -49,5 +49,17 @@ export default defineConfig({
     emptyOutDir: true,
     // корректные URL в source maps (удобно для отладки)
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        /** Несколько файлов вместо одного ~250 KiB — при обрыве соединения на крупном ответе проще «дожать» докачку. */
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('node_modules/react-dom')) return 'vendor-react-dom'
+          if (id.includes('node_modules/react-router')) return 'vendor-router'
+          if (/node_modules[/\\]react[/\\]/.test(id)) return 'vendor-react'
+          return 'vendor'
+        },
+      },
+    },
   },
 })
