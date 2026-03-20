@@ -34,16 +34,16 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 
 ## 3. CORS на Amvera
 
-В секретах сейчас `FRONTEND_URL=*` — для запросов с **Authorization: Bearer** это обычно достаточно.
+- **`FRONTEND_URL=*`** — простой вариант; при этом `allow_credentials=false` (см. [`backend/main.py`](../backend/main.py)).
+- **Кастомный домен** (например `https://myfirstproject.su`): в Amvera задайте  
+  `FRONTEND_URL=https://myfirstproject.su,http://localhost:5173`  
+  (через запятую — все нужные точные origin).
 
-Когда появится постоянный URL Vercel (например `https://xxx.vercel.app`), можно сузить CORS:
+**Почему на `*.vercel.app` был «Failed to fetch»:** у каждого деплоя свой поддомен (`second-project-main2-….vercel.app`). Если в `FRONTEND_URL` только `myfirstproject.su`, браузер шлёт `Origin: https://….vercel.app` — старый CORS его отвергал. В коде добавлено разрешение по regex для любого **`https://*.vercel.app`** (вкл. по умолчанию). Отключить: **`ALLOW_VERCEL_APP_CORS=false`** в Amvera.
 
-- В Amvera задать, например:  
-  `FRONTEND_URL=https://ваш-проект.vercel.app`  
-  или несколько через запятую:  
-  `FRONTEND_URL=https://xxx.vercel.app,http://localhost:5173`
+**Обязательно на Vercel:** переменная **`VITE_API_URL`** (см. п. 2). Без неё запросы идут на относительный `/api` на Vercel, а не на Amvera → тоже «Failed to fetch».
 
-После смены переменных — перезапуск приложения на Amvera.
+После смены переменных Amvera — перезапуск приложения.
 
 ## 4. Как убедиться, что «можно деплоить»
 
@@ -75,7 +75,7 @@ API префикс в коде: `/api` (см. `backend/main.py`).
 5. После правок `vite.config.ts`: локально `npm run build`, затем push и **Redeploy**; в Vercel задайте **`VITE_API_URL`** для API (на `base` не влияет).
 6. **HTML 304, CSS 200, а `index-*.js` вечно «Ожидание»:** это **не** из‑за `FRONTEND_URL` на Amvera. В сборке **`crossorigin` убирается** из `index.html` (плагин в [`frontend/vite.config.ts`](../frontend/vite.config.ts)). Страницы грузятся **лениво** (`React.lazy` в [`frontend/src/App.tsx`](../frontend/src/App.tsx)), vendor выносится в отдельные чанки — меньше один «тяжёлый» ответ при первом заходе. После push — **Redeploy** на Vercel.
 
-7. **`net::ERR_CONNECTION_CLOSED` и в логе «200 (OK)»:** соединение оборвалось **во время передачи тела** ответа (часто HTTP/2, прокси, антивирус, мобильный оператор). Это **не** ошибка React/Vite как таковых. Имеет смысл: открыть тот же деплой по **`*.vercel.app`**, другую сеть/VPN, отключить QUIC в Chrome (см. §8), проверить DNS у домена. Разбиение бандла (п. 6) иногда помогает, если рвётся именно на крупном файле.
+7. **`net::ERR_CONNECTION_CLOSED` и в логе «200 (OK)»:** соединение оборвалось **во время передачи тела** ответа (часто HTTP/2, прокси, антивирус, мобильный оператор). Это **не** ошибка React/Vite как таковых. В [`frontend/vite.config.ts`](../frontend/vite.config.ts) для прод-сборки отключён **`modulePreload`** — Vite больше не вставляет несколько параллельных `<link rel="modulepreload">` в `index.html` (у части сетей лишние потоки HTTP/2 рвутся выборочно). Имеет смысл: другая сеть/VPN, отключить QUIC (§8), проверить DNS у домена; сравнить кастомный домен и **`*.vercel.app`**.
 
 ## 8. `net::ERR_HTTP2_PING_FAILED` и долгая загрузка JS (~50 с)
 
