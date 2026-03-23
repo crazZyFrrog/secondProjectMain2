@@ -13,6 +13,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from backend.auth import create_access_token, decode_token, get_current_user, hash_password, verify_password
 from backend.db import get_connection, init_db
@@ -42,6 +45,18 @@ from backend.telegram_notifications import (
     send_new_user_registration_notification,
 )
 
+
+def _auth_rate_limit_key(request: Request) -> str:
+    """IP за прокси (X-Forwarded-For) или прямой клиент — для rate limit."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip() or get_remote_address(request)
+    return get_remote_address(request)
+
+
+AUTH_RATE_LIMIT = os.getenv("AUTH_RATE_LIMIT", "10/minute")
+limiter = Limiter(key_func=_auth_rate_limit_key)
+
 app = FastAPI(
     title="Landing Constructor API",
     docs_url="/docs",
@@ -50,6 +65,16 @@ app = FastAPI(
 )
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_exception_handler(_request: Request, _exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"message": "Слишком много запросов. Попробуйте позже."},
+    )
+
 
 @app.exception_handler(HTTPException)
 def http_exception_handler(_request: Request, exc: HTTPException):
@@ -57,6 +82,13 @@ def http_exception_handler(_request: Request, exc: HTTPException):
         return JSONResponse(status_code=400, content={"message": "Ошибка валидации"})
     if exc.status_code == status.HTTP_403_FORBIDDEN:
         return JSONResponse(status_code=403, content={"message": "Доступ запрещён"})
+    if exc.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR:
+        # Не отдаём клиенту внутренние поля (например traceback / str(Exception))
+        if isinstance(exc.detail, dict):
+            msg = exc.detail.get("message")
+            if isinstance(msg, str) and msg.strip():
+                return JSONResponse(status_code=500, content={"message": msg})
+        return JSONResponse(status_code=500, content={"message": "Internal server error"})
     return JSONResponse(status_code=exc.status_code, content=exc.detail if isinstance(exc.detail, dict) else {"detail": str(exc.detail)})
 api_router = APIRouter(prefix="/api")
 
@@ -298,7 +330,8 @@ def get_project_limit(plan_id: Optional[str]) -> Optional[int]:
 
 
 @api_router.post("/auth/register", responses={400: {"description": "Ошибка валидации"}})
-def register(payload: RegisterRequestSchema):
+@limiter.limit(AUTH_RATE_LIMIT)
+def register(request: Request, payload: RegisterRequestSchema):
     try:
         with get_connection() as conn:
             existing = conn.execute(
@@ -369,12 +402,13 @@ def register(payload: RegisterRequestSchema):
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Internal server error", "error": str(e)},
+            detail={"message": "Internal server error"},
         )
 
 
 @api_router.post("/auth/login", responses={400: {"description": "Ошибка валидации"}})
-def login(payload: LoginRequestSchema):
+@limiter.limit(AUTH_RATE_LIMIT)
+def login(request: Request, payload: LoginRequestSchema):
     try:
         with get_connection() as conn:
             row = conn.execute(
@@ -412,7 +446,7 @@ def login(payload: LoginRequestSchema):
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Internal server error", "error": str(e)},
+            detail={"message": "Internal server error"},
         )
 
 
