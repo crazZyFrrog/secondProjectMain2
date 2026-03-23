@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements-dev.txt
+      - name: Run pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest backend/tests -v
+
+  frontend-playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend (API for E2E)
+        run: pip install -r backend/requirements.txt
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium only
+        working-directory: frontend
+        run: npx playwright install chromium --with-deps
+
+      - name: Start API server
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          JWT_SECRET: ci-jwt-secret-key-minimum-32-characters-here
+          SQLITE_DB_PATH: ${{ runner.temp }}/e2e_api.db
+          TELEGRAM_BOT_TOKEN: ""
+          TELEGRAM_MANAGER_CHAT_ID: ""
+          AUTH_RATE_LIMIT: 1000/minute
+          APP_ENV: development
+        run: |
+          python -m uvicorn backend.main:app --host 127.0.0.1 --port 5001 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:5001/health && break
+            sleep 1
+          done
+
+      - name: Start Vite dev server
+        working-directory: frontend
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 5173 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:5173/ >/dev/null && break
+            sleep 1
+          done
+
+      - name: Run Playwright (Chromium)
+        working-directory: frontend
+        run: npx playwright test --project=chromium

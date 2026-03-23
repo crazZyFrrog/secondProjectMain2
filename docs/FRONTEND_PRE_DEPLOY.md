@@ -67,8 +67,7 @@ npm run verify:frontend
 
 3. **Redeploy** после добавления или смены переменных.
 
-4. На Amvera при необходимости уточните CORS:  
-   `FRONTEND_URL=https://ваш-проект.vercel.app` (или оставьте `*` на время отладки).
+4. На Amvera уточните CORS: `FRONTEND_URL` — ваши точные origin’ы (через запятую). Для **любых** превью `*.vercel.app` дополнительно задайте **`ALLOW_VERCEL_APP_CORS=true`** (по умолчанию в бэкенде выключено). На время отладки возможен `FRONTEND_URL=*` (без cookie credentials к API).
 
 Подробнее: [VERCEL_FRONTEND.md](./VERCEL_FRONTEND.md).
 
