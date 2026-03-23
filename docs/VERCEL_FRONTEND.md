@@ -39,7 +39,7 @@ API префикс в коде: `/api` (см. `backend/main.py`).
   `FRONTEND_URL=https://myfirstproject.su,http://localhost:5173`  
   (через запятую — все нужные точные origin).
 
-**Почему на `*.vercel.app` был «Failed to fetch»:** у каждого деплоя свой поддомен (`second-project-main2-….vercel.app`). Если в `FRONTEND_URL` только `myfirstproject.su`, браузер шлёт `Origin: https://….vercel.app` — старый CORS его отвергал. В коде добавлено разрешение по regex для любого **`https://*.vercel.app`** (вкл. по умолчанию). Отключить: **`ALLOW_VERCEL_APP_CORS=false`** в Amvera.
+**Почему на `*.vercel.app` бывает «Failed to fetch»:** у каждого деплоя свой поддомен (`second-project-main2-….vercel.app`). Если в `FRONTEND_URL` только ваш кастомный домен, браузер с превью Vercel шлёт другой `Origin` — CORS его отвергнет. Разрешение по regex для **`https://*.vercel.app`** в коде есть, но **по умолчанию выключено** (ужесточение безопасности). Для превью на Vercel задайте в Amvera **`ALLOW_VERCEL_APP_CORS=true`** (и при необходимости перечислите origin’ы в `FRONTEND_URL`).
 
 **Обязательно на Vercel:** переменная **`VITE_API_URL`** (см. п. 2). Без неё запросы идут на относительный `/api` на Vercel, а не на Amvera → тоже «Failed to fetch».
 

@@ -57,11 +57,13 @@ def _auth_rate_limit_key(request: Request) -> str:
 AUTH_RATE_LIMIT = os.getenv("AUTH_RATE_LIMIT", "10/minute")
 limiter = Limiter(key_func=_auth_rate_limit_key)
 
+_IS_PRODUCTION = os.getenv("APP_ENV", "").strip().lower() in ("production", "prod")
+
 app = FastAPI(
     title="Landing Constructor API",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
+    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
 )
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
@@ -79,6 +81,12 @@ def rate_limit_exception_handler(_request: Request, _exc: RateLimitExceeded) -> 
 @app.exception_handler(HTTPException)
 def http_exception_handler(_request: Request, exc: HTTPException):
     if exc.status_code == status.HTTP_400_BAD_REQUEST:
+        if isinstance(exc.detail, dict):
+            body: dict = {"message": exc.detail.get("message", "Ошибка валидации")}
+            fe = exc.detail.get("fieldErrors")
+            if isinstance(fe, dict) and fe:
+                body["fieldErrors"] = fe
+            return JSONResponse(status_code=400, content=body)
         return JSONResponse(status_code=400, content={"message": "Ошибка валидации"})
     if exc.status_code == status.HTTP_403_FORBIDDEN:
         return JSONResponse(status_code=403, content={"message": "Доступ запрещён"})
@@ -96,9 +104,8 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 _origin_parts = [url.strip() for url in FRONTEND_URL.split(",") if url.strip()]
 allow_all = "*" in _origin_parts
 allowed_origins = [o for o in _origin_parts if o != "*"]
-# Превью и прод Vercel: каждый деплой даёт новый *.vercel.app — иначе «Failed to fetch» при тесте не с кастомного домена.
-# Отключить: ALLOW_VERCEL_APP_CORS=false
-_allow_vercel = os.getenv("ALLOW_VERCEL_APP_CORS", "true").lower() in ("1", "true", "yes")
+# Превью Vercel (*.vercel.app): по умолчанию выключено (ужесточение CORS). Включить: ALLOW_VERCEL_APP_CORS=true
+_allow_vercel = os.getenv("ALLOW_VERCEL_APP_CORS", "false").lower() in ("1", "true", "yes")
 _vercel_regex = r"https://[a-zA-Z0-9][a-zA-Z0-9\-._]*\.vercel\.app"
 
 # Явный список методов (не ["*"]): часть прокси/старого ПО криво обрабатывает wildcard в preflight.
@@ -339,14 +346,14 @@ def register(request: Request, payload: RegisterRequestSchema):
                 (payload.email.strip(),),
             ).fetchone()
             if existing:
-                print(f"[REGISTER] Email already exists: {payload.email}")
+                print("[REGISTER] Email already exists", flush=True)
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail={"message": "Email already registered"},
                 )
 
             client_id = str(uuid4())
-            print(f"[REGISTER] Creating new user: {payload.email} ({payload.username})")
+            print("[REGISTER] Creating new user", flush=True)
             conn.execute(
                 """
                 INSERT INTO clients (id, company_type, username, email, password_hash, plan_id, role, created_at)
@@ -421,20 +428,20 @@ def login(request: Request, payload: LoginRequestSchema):
             ).fetchone()
 
             if not row:
-                print(f"[LOGIN] User not found: {payload.email}")
+                print("[LOGIN] User not found", flush=True)
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail={"message": "Invalid credentials"},
                 )
             
             if not verify_password(payload.password, row["password_hash"]):
-                print(f"[LOGIN] Invalid password for user: {payload.email}")
+                print("[LOGIN] Invalid password", flush=True)
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail={"message": "Invalid credentials"},
                 )
             
-            print(f"[LOGIN] Success for user: {row['email']} ({row['username']})")
+            print("[LOGIN] Success", flush=True)
 
         token = create_access_token(row["id"])
         return {"token": token}

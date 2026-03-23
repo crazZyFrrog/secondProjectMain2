@@ -1,6 +1,6 @@
 """
 Валидация входящих данных: params, query, body.
-При ошибке валидации — HTTP 400, тело: {"message": "Ошибка валидации"}.
+При ошибке валидации — HTTP 400: message и при необходимости fieldErrors.
 """
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import re
 import uuid
 from typing import Annotated, Any, List, Optional, Union
 
-from fastapi import Path, Query, Request, status
+from fastapi import HTTPException, Path, Query, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -27,11 +27,30 @@ PAGINATION_OFFSET_MIN = 0
 # ----- Обработчик 400 для ошибок валидации -----
 
 
+def _humanize_pydantic_msg(msg: object) -> str:
+    if not isinstance(msg, str):
+        return str(msg)
+    s = msg.strip()
+    if s.startswith("Value error, "):
+        return s[13:].strip()
+    if s == "Field required":
+        return "Поле обязательно"
+    if "String should have at least" in s:
+        return "Слишком короткое значение"
+    if "String should have at most" in s:
+        return "Слишком длинное значение"
+    if "Input should be a valid dictionary" in s:
+        return "Ожидается объект (JSON)"
+    if "Input should be a valid list" in s:
+        return "Ожидается массив"
+    return s
+
+
 def validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
     field_errors: dict[str, str] = {}
     for err in exc.errors():
         loc = err.get("loc", ())
-        msg = err.get("msg", "Ошибка валидации")
+        msg = _humanize_pydantic_msg(err.get("msg", "Ошибка валидации"))
         if loc:
             field_name = loc[-1] if isinstance(loc[-1], str) else str(loc[-1])
             field_errors[field_name] = msg
@@ -45,6 +64,14 @@ def validation_exception_handler(_request: Request, exc: RequestValidationError)
 
 
 # ----- Валидация path/query (зависимости) -----
+
+
+def raise_path_validation(field_name: str, message: str) -> None:
+    """HTTP 400 с указанием поля (совместимо с http_exception_handler в main)."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail={"message": "Ошибка валидации", "fieldErrors": {field_name: message}},
+    )
 
 
 def validate_uuid_or_positive_id(value: str) -> str:
@@ -72,8 +99,7 @@ def path_project_id(
     try:
         return validate_uuid_or_positive_id(project_id)
     except ValueError as e:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message": "Ошибка валидации"})
+        raise_path_validation("project_id", str(e))
 
 
 def path_plan_id(
@@ -81,21 +107,18 @@ def path_plan_id(
 ) -> str:
     try:
         return validate_uuid_or_positive_id(plan_id)
-    except ValueError:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message": "Ошибка валидации"})
+    except ValueError as e:
+        raise_path_validation("plan_id", str(e))
 
 
 def path_template_id(
     template_id: Annotated[str, Path(description="ID шаблона")],
 ) -> str:
     if not template_id or not isinstance(template_id, str):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message": "Ошибка валидации"})
+        raise_path_validation("template_id", "ID шаблона обязателен")
     s = template_id.strip()
     if len(s) > MAX_STR_SHORT:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message": "Ошибка валидации"})
+        raise_path_validation("template_id", f"Максимум {MAX_STR_SHORT} символов")
     return s
 
 
@@ -186,15 +209,31 @@ class RegisterRequestSchema(BaseModel):
 
 
 class LoginRequestSchema(BaseModel):
-    email: str = Field(..., min_length=1, max_length=MAX_STR_SHORT)
-    password: str = Field(..., min_length=1, max_length=MAX_PASSWORD)
+    email: str
+    password: str
 
-    @field_validator("email")
+    @field_validator("email", mode="before")
     @classmethod
-    def email_trim(cls, v: str) -> str:
-        s = v.strip()
-        if not s or "@" not in s:
+    def email_login(cls, v: Any) -> str:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            raise ValueError("Введите email")
+        s = str(v).strip()
+        if len(s) > MAX_STR_SHORT:
+            raise ValueError(f"Максимум {MAX_STR_SHORT} символов")
+        if "@" not in s or not re.match(r"^[^@]+@[^@]+\.[^@]+$", s):
             raise ValueError("Некорректный email")
+        return s
+
+    @field_validator("password", mode="before")
+    @classmethod
+    def password_login(cls, v: Any) -> str:
+        if v is None:
+            raise ValueError("Введите пароль")
+        s = str(v)
+        if not s.strip():
+            raise ValueError("Введите пароль")
+        if len(s) > MAX_PASSWORD:
+            raise ValueError(f"Максимум {MAX_PASSWORD} символов")
         return s
 
 

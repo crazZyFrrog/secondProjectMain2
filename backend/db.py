@@ -107,9 +107,11 @@ def get_connection() -> DatabaseConnection:
         conn.autocommit = False
         return DatabaseConnection(conn)
     else:
-        # SQLite для локальной разработки
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(DB_PATH))
+        # SQLite: путь из SQLITE_DB_PATH (pytest) или data/app.db
+        sqlite_path = os.getenv("SQLITE_DB_PATH", "").strip()
+        sqlite_file = Path(sqlite_path) if sqlite_path else DB_PATH
+        sqlite_file.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(sqlite_file))
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return DatabaseConnection(conn)

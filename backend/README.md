@@ -164,6 +164,16 @@ Authorization: Bearer <your_jwt_token>
 ## 🧪 Тестирование
 
 ```bash
+# Pytest (из корня репозитория, не из папки backend)
+pip install -r backend/requirements-dev.txt
+# Windows PowerShell:
+$env:PYTHONPATH = (Get-Location).Path
+python -m pytest backend/tests -v
+# Linux/macOS:
+# PYTHONPATH=. pytest backend/tests -v
+```
+
+```bash
 # E2E тесты (из корня проекта)
 cd frontend
 npm run test
