@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useProjectStore } from '../store/projectStore'
-import { Eye, Download, Sparkles, Menu } from 'lucide-react'
+import { Eye, Download, Sparkles, Menu, LayoutDashboard, Home, Settings } from 'lucide-react'
 
 type Section = 'company' | 'products' | 'contacts'
 
@@ -72,19 +72,50 @@ export default function EditorPage() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Top Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <button
+            type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden text-gray-600 hover:text-gray-900"
+            className="lg:hidden shrink-0 text-gray-600 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100"
+            aria-label="Меню разделов"
           >
             <Menu size={24} />
           </button>
+          <nav
+            className="flex items-center gap-0.5 sm:gap-1 shrink-0 border-l border-gray-200 pl-2 sm:pl-3"
+            aria-label="Навигация приложения"
+          >
+            <Link
+              to="/dashboard"
+              title="К проектам"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition text-sm font-medium"
+            >
+              <LayoutDashboard size={18} className="shrink-0" aria-hidden />
+              <span className="hidden sm:inline">К проектам</span>
+            </Link>
+            <Link
+              to="/"
+              title="Главная"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition text-sm font-medium"
+            >
+              <Home size={18} className="shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Главная</span>
+            </Link>
+            <Link
+              to="/settings"
+              title="Настройки"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition text-sm font-medium"
+            >
+              <Settings size={18} className="shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Настройки</span>
+            </Link>
+          </nav>
           <input
             type="text"
             value={project.name}
             onChange={(e) => updateProject(id!, { name: e.target.value })}
-            className="text-xl font-semibold border-none focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2"
+            className="min-w-0 flex-1 text-lg sm:text-xl font-semibold border-none focus:outline-none focus:ring-2 focus:ring-primary-500 rounded px-2"
           />
           {saveStatus === 'saving' && (
             <span className="text-sm text-gray-500">Сохранение...</span>
