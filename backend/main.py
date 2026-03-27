@@ -13,6 +13,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -58,6 +60,15 @@ AUTH_RATE_LIMIT = os.getenv("AUTH_RATE_LIMIT", "10/minute")
 limiter = Limiter(key_func=_auth_rate_limit_key)
 
 _IS_PRODUCTION = os.getenv("APP_ENV", "").strip().lower() in ("production", "prod")
+
+_sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        integrations=[FastApiIntegration()],
+        traces_sample_rate=0.1 if _IS_PRODUCTION else 0.0,
+        environment=(os.getenv("APP_ENV", "development") or "development").strip() or "development",
+    )
 
 app = FastAPI(
     title="Landing Constructor API",
