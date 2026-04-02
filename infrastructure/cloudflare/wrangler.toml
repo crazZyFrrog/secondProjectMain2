@@ -1,0 +1,14 @@
+name = "myfirstproject-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Маршруты — Worker обрабатывает запросы к этим хостам
+# Для активации раскомментируйте после добавления домена в Cloudflare
+
+# [[routes]]
+# pattern = "myfirstproject.su/*"
+# zone_name = "myfirstproject.su"
+
+# [[routes]]
+# pattern = "www.myfirstproject.su/*"
+# zone_name = "myfirstproject.su"
