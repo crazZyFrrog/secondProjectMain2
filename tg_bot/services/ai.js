@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { config, FAQ_SYSTEM_PROMPT } from '../config.js';
+import { config } from '../config.js';
+import { getConfig } from './db.js';
 
 let client = null;
 
@@ -21,10 +22,12 @@ function getClient() {
 export async function askAI(userQuestion) {
   const openai = getClient();
 
+  const systemPrompt = getConfig('faq_prompt', 'Ты помощник компании. Отвечай кратко и по делу.');
+
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
-      { role: 'system', content: FAQ_SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: userQuestion },
     ],
     max_tokens: 500,

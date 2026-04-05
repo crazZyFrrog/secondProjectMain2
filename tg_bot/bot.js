@@ -3,7 +3,7 @@ import { Telegraf, Markup } from 'telegraf';
 import { config } from './config.js';
 import { STATES, getSession, clearSession } from './states.js';
 import { startScenario1, handleScenario1Text, handleScenario1Callback } from './handlers/scenario1.js';
-import { startScenario2, handleScenario2Text, handleScenario2Callback } from './handlers/scenario2.js';
+import { startScenario2, handleScenario2Callback } from './handlers/scenario2.js';
 import { ensureHeaders } from './services/sheets.js';
 
 if (!config.botToken) {
@@ -18,7 +18,7 @@ const bot = new Telegraf(config.botToken);
 function mainMenuKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('📅 Записаться на встречу', 'menu:book')],
-    [Markup.button.callback('❓ Задать вопрос (FAQ)', 'menu:faq')],
+    [Markup.button.callback('❓ Часто задаваемые вопросы', 'menu:faq')],
   ]);
 }
 
@@ -43,7 +43,6 @@ bot.command('myid', (ctx) =>
 bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
 
-  // Главное меню
   if (data === 'menu:book') {
     await ctx.answerCbQuery();
     await ctx.editMessageReplyMarkup(undefined);
@@ -58,12 +57,10 @@ bot.on('callback_query', async (ctx) => {
     return startScenario2(ctx);
   }
 
-  const session = getSession(ctx.chat.id);
-
-  // Сценарий 1 (product:, slot:, confirm:)
-  const s1Prefixes = ['product:', 'slot:', 'confirm:'];
+  // Сценарий 1 (product:, slot:, confirm:, cancel)
+  const s1Prefixes = ['product:', 'slot:', 'confirm:', 'cancel'];
   if (s1Prefixes.some((p) => data.startsWith(p))) {
-    return handleScenario1Callback(ctx);
+    return handleScenario1Callback(ctx, showMainMenu);
   }
 
   // Сценарий 2 (faq:)
@@ -92,11 +89,12 @@ bot.on('text', async (ctx) => {
     return handleScenario1Text(ctx);
   }
 
+  // В FAQ теперь только кнопки — свободный текст возвращает в меню
   if (session.state === STATES.S2_FAQ) {
-    return handleScenario2Text(ctx);
+    await ctx.reply('Пожалуйста, выберите вопрос из списка выше или вернитесь в меню: /menu');
+    return;
   }
 
-  // Нет активного сценария — показываем меню
   await showMainMenu(ctx);
 });
 

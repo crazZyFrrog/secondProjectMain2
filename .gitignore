@@ -66,6 +66,7 @@ backend/.env
 tg_bot/node_modules/
 tg_bot/.env
 tg_bot/service-account.json
+tg_bot/data/
 
 ####################################
 # Playwright тесты
