@@ -9,6 +9,7 @@
     "dev": "node --watch bot.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.8.0",
     "dotenv": "^16.4.5",
     "googleapis": "^144.0.0",
     "openai": "^4.86.2",

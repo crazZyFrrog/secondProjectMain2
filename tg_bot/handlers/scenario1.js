@@ -1,18 +1,27 @@
 import { Markup } from 'telegraf';
 import { STATES, getSession, setState, setData, clearSession } from '../states.js';
-import { PRODUCTS, getMeetingSlots } from '../config.js';
+import { getMeetingSlots } from '../config.js';
 import { appendLeadToSheet } from '../services/sheets.js';
 import { notifyManager } from '../services/notifier.js';
+import { getProducts, saveLead } from '../services/db.js';
+
+// ─── Кнопка «Отменить» ─────────────────────────────────────────────────────
+
+function cancelRow() {
+  return [Markup.button.callback('❌ Отменить', 'cancel')];
+}
 
 // ─── Клавиатуры ────────────────────────────────────────────────────────────
 
 function productsKeyboard() {
-  const rows = PRODUCTS.map((p) => [Markup.button.callback(p, `product:${p}`)]);
+  const rows = getProducts().map((p) => [Markup.button.callback(p, `product:${p}`)]);
+  rows.push(cancelRow());
   return Markup.inlineKeyboard(rows);
 }
 
 function slotsKeyboard() {
   const rows = getMeetingSlots().map((s) => [Markup.button.callback(s, `slot:${s}`)]);
+  rows.push(cancelRow());
   return Markup.inlineKeyboard(rows);
 }
 
@@ -20,14 +29,20 @@ function confirmKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('✅ Подтвердить', 'confirm:yes')],
     [Markup.button.callback('✏️ Заполнить заново', 'confirm:no')],
+    cancelRow(),
   ]);
+}
+
+// Клавиатура с только кнопкой «Отменить» — для шагов со свободным вводом
+function cancelKeyboard() {
+  return Markup.inlineKeyboard([cancelRow()]);
 }
 
 // ─── Шаг 1: старт сценария ─────────────────────────────────────────────────
 
 export async function startScenario1(ctx) {
   setState(ctx.chat.id, STATES.S1_NAME);
-  await ctx.reply('Как вас зовут? Введите имя и фамилию.');
+  await ctx.reply('Как вас зовут? Введите ваше имя.', cancelKeyboard());
 }
 
 // ─── Диспетчер текстовых сообщений для сценария 1 ─────────────────────────
@@ -41,14 +56,14 @@ export async function handleScenario1Text(ctx) {
     case STATES.S1_NAME: {
       setData(chatId, 'name', text);
       setState(chatId, STATES.S1_COMPANY);
-      await ctx.reply('Введите название вашей компании.');
+      await ctx.reply('Введите название вашей компании.', cancelKeyboard());
       break;
     }
 
     case STATES.S1_COMPANY: {
       setData(chatId, 'company', text);
       setState(chatId, STATES.S1_DESC);
-      await ctx.reply('Кратко опишите деятельность компании (1–2 предложения).');
+      await ctx.reply('Кратко опишите деятельность компании (1–2 предложения).', cancelKeyboard());
       break;
     }
 
@@ -62,19 +77,19 @@ export async function handleScenario1Text(ctx) {
     case STATES.S1_PHONE: {
       const phoneRe = /^[\d\s\+\-\(\)]{7,20}$/;
       if (!phoneRe.test(text)) {
-        await ctx.reply('Пожалуйста, введите корректный номер телефона.');
+        await ctx.reply('Пожалуйста, введите корректный номер телефона.', cancelKeyboard());
         return;
       }
       setData(chatId, 'phone', text);
       setState(chatId, STATES.S1_EMAIL);
-      await ctx.reply('Введите ваш e-mail.');
+      await ctx.reply('Введите ваш e-mail.', cancelKeyboard());
       break;
     }
 
     case STATES.S1_EMAIL: {
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRe.test(text)) {
-        await ctx.reply('Пожалуйста, введите корректный e-mail.');
+        await ctx.reply('Пожалуйста, введите корректный e-mail.', cancelKeyboard());
         return;
       }
       setData(chatId, 'email', text);
@@ -84,7 +99,6 @@ export async function handleScenario1Text(ctx) {
     }
 
     case STATES.S1_DATETIME: {
-      // Пользователь ввёл своё время вместо выбора кнопки
       setData(chatId, 'datetime', text);
       setState(chatId, STATES.S1_CONFIRM);
       await showConfirmation(ctx);
@@ -98,18 +112,26 @@ export async function handleScenario1Text(ctx) {
 
 // ─── Диспетчер callback-кнопок для сценария 1 ─────────────────────────────
 
-export async function handleScenario1Callback(ctx) {
+export async function handleScenario1Callback(ctx, onMenu) {
   const chatId = ctx.chat.id;
   const callbackData = ctx.callbackQuery.data;
 
   await ctx.answerCbQuery();
+
+  if (callbackData === 'cancel') {
+    await ctx.editMessageReplyMarkup(undefined);
+    clearSession(chatId);
+    await ctx.reply('Заявка отменена. Возвращаю в главное меню...');
+    await onMenu(ctx);
+    return;
+  }
 
   if (callbackData.startsWith('product:')) {
     const product = callbackData.replace('product:', '');
     setData(chatId, 'product', product);
     setState(chatId, STATES.S1_PHONE);
     await ctx.editMessageReplyMarkup(undefined);
-    await ctx.reply(`Отлично, записал: "${product}".\n\nВведите ваш номер телефона.`);
+    await ctx.reply(`Отлично, записал: "${product}".\n\nВведите ваш номер телефона.`, cancelKeyboard());
     return;
   }
 
@@ -117,7 +139,10 @@ export async function handleScenario1Callback(ctx) {
     const slot = callbackData.replace('slot:', '');
     if (slot === 'Другое время') {
       await ctx.editMessageReplyMarkup(undefined);
-      await ctx.reply('Введите удобное дату и время в свободной форме (например: "10 апреля, 14:00").');
+      await ctx.reply(
+        'Введите удобное дату и время в свободной форме (например: "10 апреля, 14:00").',
+        cancelKeyboard()
+      );
       return;
     }
     setData(chatId, 'datetime', slot);
@@ -181,8 +206,15 @@ async function finalizeBooking(ctx) {
   await ctx.reply('⏳ Сохраняю вашу заявку...');
 
   try {
-    await appendLeadToSheet(lead);
-    await notifyManager(ctx.telegram, lead);
+    saveLead(lead);
+
+    await Promise.all([
+      appendLeadToSheet(lead).catch((e) =>
+        console.warn('Google Sheets недоступен, заявка сохранена в БД:', e.message)
+      ),
+      notifyManager(ctx.telegram, lead),
+    ]);
+
     await ctx.reply(
       '✅ Заявка принята! Менеджер свяжется с вами перед встречей.\n\nВернуться в начало: /start'
     );
