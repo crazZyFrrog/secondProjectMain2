@@ -1,0 +1,17 @@
+{
+  "name": "tg-bot-kp",
+  "version": "1.0.0",
+  "description": "Telegram-бот для создания индивидуального КП",
+  "type": "module",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0",
+    "openai": "^4.86.2",
+    "telegraf": "^4.16.3"
+  }
+}

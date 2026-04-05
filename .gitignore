@@ -60,6 +60,14 @@ __pycache__/
 backend/.env
 
 ####################################
+# Telegram Bot (tg_bot/)
+####################################
+
+tg_bot/node_modules/
+tg_bot/.env
+tg_bot/service-account.json
+
+####################################
 # Playwright тесты
 ####################################
 
