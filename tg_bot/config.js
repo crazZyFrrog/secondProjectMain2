@@ -4,6 +4,7 @@ export const config = {
   botToken: process.env.BOT_TOKEN,
   managerChatId: process.env.MANAGER_CHAT_ID,
   openaiApiKey: process.env.OPENAI_API_KEY,
+  gigachatApiKey: process.env.GIGACHAT_API_KEY,
   spreadsheetId: process.env.SPREADSHEET_ID,
   googleServiceAccountJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? './service-account.json',
   sqliteDbPath: process.env.SQLITE_DB_PATH ?? './data/bot.db',
