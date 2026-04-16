@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { Telegraf, Markup } from 'telegraf';
 import { config } from './config.js';
-import { STATES, getSession, clearSession } from './states.js';
+import { STATES, getSession, setState, clearSession } from './states.js';
 import { startScenario1, handleScenario1Text, handleScenario1Callback } from './handlers/scenario1.js';
 import { startScenario2, handleScenario2Callback } from './handlers/scenario2.js';
+import { startLLMScenario, handleLLMMessage } from './handlers/scenarioLLM.js';
 import { ensureHeaders } from './services/sheets.js';
 
 if (!config.botToken) {
@@ -19,6 +20,7 @@ function mainMenuKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('📅 Записаться на встречу', 'menu:book')],
     [Markup.button.callback('❓ Часто задаваемые вопросы', 'menu:faq')],
+    [Markup.button.callback('🤖 Консультант по тарифам', 'menu:llm')],
   ]);
 }
 
@@ -37,6 +39,11 @@ bot.command('menu', showMainMenu);
 bot.command('myid', (ctx) =>
   ctx.reply(`Ваш chat_id: ${ctx.chat.id}`)
 );
+bot.command('ai', async (ctx) => {
+  clearSession(ctx.chat.id);
+  setState(ctx.chat.id, STATES.S3_LLM);
+  await startLLMScenario(ctx);
+});
 
 // ─── Callback-обработчики (кнопки) ─────────────────────────────────────────
 
@@ -55,6 +62,14 @@ bot.on('callback_query', async (ctx) => {
     await ctx.editMessageReplyMarkup(undefined);
     clearSession(ctx.chat.id);
     return startScenario2(ctx);
+  }
+
+  if (data === 'menu:llm') {
+    await ctx.answerCbQuery();
+    await ctx.editMessageReplyMarkup(undefined);
+    clearSession(ctx.chat.id);
+    setState(ctx.chat.id, STATES.S3_LLM);
+    return startLLMScenario(ctx);
   }
 
   // Сценарий 1 (product:, slot:, confirm:, cancel)
@@ -93,6 +108,11 @@ bot.on('text', async (ctx) => {
   if (session.state === STATES.S2_FAQ) {
     await ctx.reply('Пожалуйста, выберите вопрос из списка выше или вернитесь в меню: /menu');
     return;
+  }
+
+  // LLM-консультант
+  if (session.state === STATES.S3_LLM) {
+    return handleLLMMessage(ctx);
   }
 
   await showMainMenu(ctx);

@@ -11,6 +11,9 @@ export const STATES = {
 
   // Сценарий 2: FAQ
   S2_FAQ: 'S2_FAQ',
+
+  // Сценарий 3: LLM-консультант (GigaChat)
+  S3_LLM: 'S3_LLM',
 };
 
 /**
