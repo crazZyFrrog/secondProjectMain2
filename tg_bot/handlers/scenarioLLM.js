@@ -1,19 +1,5 @@
-import { askGigaChat } from '../services/gigachat.js';
-
-// ─── Ключевые слова для pre-filter ──────────────────────────────────────────
-
-const ALLOWED_KEYWORDS = [
-  'тариф', 'цена', 'стоимость', 'лендинг', 'сайт',
-  'шаблон', 'подписка', 'проект', 'план', 'free',
-  'pro', 'enterprise', 'экспорт', 'платформ', 'возможност',
-  'отмен', 'возврат', 'пробн', 'период', 'средств',
-  'гарантия', 'гарант', 'бесплатн', 'оплат', 'купить',
-  'приобрест', 'перейти', 'обновить', 'понизить', 'сменить',
-  'аккаунт', 'функц', 'ai', 'генерац', 'шаблон',
-];
-
-const OFF_TOPIC_REPLY =
-  'Я могу помочь только с вопросами о тарифах и создании лендингов 🙂';
+import { askNadezda } from '../services/ai.js';
+import { getHistory, addToHistory, clearHistory } from '../states.js';
 
 // ─── Логирование ─────────────────────────────────────────────────────────────
 
@@ -23,17 +9,10 @@ function logRequest(chatId, username, text, result) {
   console.log(`[${ts}] ${user} | Q: "${text.slice(0, 80)}" | ${result}`);
 }
 
-// ─── Pre-filter ──────────────────────────────────────────────────────────────
-
-function isOnTopic(text) {
-  const lower = text.toLowerCase();
-  return ALLOWED_KEYWORDS.some((kw) => lower.includes(kw));
-}
-
 // ─── Обработчик входящего сообщения ─────────────────────────────────────────
 
 /**
- * Главный обработчик LLM-режима.
+ * Главный обработчик LLM-режима (Надежда / OpenAI gpt-4o-mini).
  * Вызывать из bot.on('text') когда пользователь находится в LLM-сессии.
  *
  * @param {import('telegraf').Context} ctx
@@ -43,54 +22,56 @@ export async function handleLLMMessage(ctx) {
   const chatId = ctx.chat.id;
   const username = ctx.from?.username;
 
-  if (!isOnTopic(userText)) {
-    logRequest(chatId, username, userText, 'FILTERED (off-topic)');
-    await ctx.reply(OFF_TOPIC_REPLY);
-    return;
-  }
-
   try {
     await ctx.sendChatAction('typing');
 
-    const answer = await askGigaChat(userText);
+    const history = getHistory(chatId);
+    let answer;
+
+    try {
+      answer = await askNadezda(userText, history);
+    } catch (err) {
+      if (err.message.includes('токен устарел')) {
+        await ctx.sendChatAction('typing');
+        answer = await askNadezda(userText, history);
+      } else {
+        throw err;
+      }
+    }
+
+    addToHistory(chatId, 'user', userText);
+    addToHistory(chatId, 'assistant', answer);
 
     logRequest(chatId, username, userText, 'OK');
     await ctx.reply(answer);
   } catch (err) {
     logRequest(chatId, username, userText, `ERROR: ${err.message}`);
     console.error('GigaChat error:', err);
-
-    if (err.message.includes('токен устарел')) {
-      try {
-        await ctx.sendChatAction('typing');
-        const answer = await askGigaChat(userText);
-        await ctx.reply(answer);
-      } catch (retryErr) {
-        console.error('GigaChat retry error:', retryErr);
-        await ctx.reply(
-          'Извините, сервис временно недоступен. Попробуйте немного позже.'
-        );
-      }
-    } else {
-      await ctx.reply(
-        'Извините, произошла ошибка при обработке запроса. Попробуйте позже.'
-      );
-    }
+    await ctx.reply(
+      'Что-то пошло не так. Попробуйте чуть позже или напишите нам напрямую.'
+    );
   }
 }
 
 /**
- * Отправляет приветствие LLM-режима.
+ * Отправляет приветствие LLM-режима и сбрасывает историю диалога.
  * @param {import('telegraf').Context} ctx
  */
 export async function startLLMScenario(ctx) {
+  clearHistory(ctx.chat.id);
   await ctx.reply(
-    '🤖 Режим консультанта активирован!\n\n' +
-    'Я отвечаю на вопросы о:\n' +
-    '• Тарифах и ценах\n' +
-    '• Создании лендингов\n' +
-    '• Возможностях платформы\n' +
-    '• Шаблонах и проектах\n\n' +
-    'Задайте ваш вопрос:'
+    'Привет! Я Надежда, менеджер LandingBuilder 👋\n\n' +
+    'Помогу разобраться с услугами и ценами.\n' +
+    'Задайте ваш вопрос — отвечу.\n\n' +
+    'Команда /reset — начать диалог заново.'
   );
+}
+
+/**
+ * Сбрасывает историю диалога для текущего пользователя.
+ * @param {import('telegraf').Context} ctx
+ */
+export async function resetLLMScenario(ctx) {
+  clearHistory(ctx.chat.id);
+  await ctx.reply('История очищена. Начнём сначала 🔄');
 }
