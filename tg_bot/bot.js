@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { STATES, getSession, setState, clearSession } from './states.js';
 import { startScenario1, handleScenario1Text, handleScenario1Callback } from './handlers/scenario1.js';
 import { startScenario2, handleScenario2Callback } from './handlers/scenario2.js';
-import { startLLMScenario, handleLLMMessage } from './handlers/scenarioLLM.js';
+import { startLLMScenario, handleLLMMessage, resetLLMScenario } from './handlers/scenarioLLM.js';
 import { ensureHeaders } from './services/sheets.js';
 
 if (!config.botToken) {
@@ -43,6 +43,16 @@ bot.command('ai', async (ctx) => {
   clearSession(ctx.chat.id);
   setState(ctx.chat.id, STATES.S3_LLM);
   await startLLMScenario(ctx);
+});
+
+bot.command('reset', async (ctx) => {
+  const session = getSession(ctx.chat.id);
+  if (session.state === STATES.S3_LLM) {
+    await resetLLMScenario(ctx);
+  } else {
+    clearSession(ctx.chat.id);
+    await showMainMenu(ctx);
+  }
 });
 
 // ─── Callback-обработчики (кнопки) ─────────────────────────────────────────
@@ -121,13 +131,16 @@ bot.on('text', async (ctx) => {
 // ─── Запуск ─────────────────────────────────────────────────────────────────
 
 async function main() {
-  try {
-    await ensureHeaders();
-  } catch (err) {
-    console.warn('Не удалось проверить заголовки Google Sheets:', err.message);
-  }
+  // Проверка заголовков Google Sheets — в фоне, не блокирует старт
+  ensureHeaders().catch((err) =>
+    console.warn('Google Sheets недоступен:', err.message)
+  );
 
-  await bot.launch();
+  // В Telegraf 4.x launch() — бесконечный промис, поэтому лог до него
+  bot.launch().catch((err) => {
+    console.error('Ошибка запуска бота:', err.message);
+    process.exit(1);
+  });
   console.log('✅ Бот запущен. Нажмите Ctrl+C для остановки.');
 
   process.once('SIGINT', () => bot.stop('SIGINT'));

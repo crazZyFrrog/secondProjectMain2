@@ -1,0 +1,50 @@
+{
+  "tariffs": [
+    {
+      "name": "Free",
+      "price": "0 руб. / навсегда",
+      "templates": 3,
+      "projects": 1,
+      "exports": ["HTML"]
+    },
+    {
+      "name": "Pro",
+      "price": "1990 руб. / месяц",
+      "templates": 12,
+      "projects": 10,
+      "exports": ["HTML", "PDF", "DOCX"]
+    },
+    {
+      "name": "Enterprise",
+      "price": "Цена по запросу",
+      "templates": "Безлимит",
+      "projects": "Безлимит",
+      "exports": ["HTML", "PDF", "DOCX"],
+      "extra": "Priority support. Связаться: support@myfirstproject.su"
+    }
+  ],
+  "faq": [
+    {
+      "question": "Могу ли я сменить тариф позже?",
+      "answer": "Да, вы можете обновить или понизить тариф в любое время из настроек аккаунта."
+    },
+    {
+      "question": "Что происходит после окончания пробного периода?",
+      "answer": "Вы можете продолжить использовать бесплатный план или обновиться до Pro."
+    },
+    {
+      "question": "Есть ли возврат средств?",
+      "answer": "Да, мы предлагаем 30-дневную гарантию возврата денег без вопросов."
+    }
+  ],
+  "platform": {
+    "description": "Сервис для создания лендингов без кода",
+    "features": [
+      "Создание лендингов без кода",
+      "База шаблонов",
+      "AI-генерация контента",
+      "Экспорт документов (HTML, PDF, DOCX)"
+    ],
+    "contact": "support@myfirstproject.su"
+  }
+}
