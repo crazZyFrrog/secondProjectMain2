@@ -9,5 +9,7 @@ __pycache__/
 .venv/
 venv/
 node_modules/
-data/*.db
-data/gigachat_token.json
+tg_bot/data/*.db
+tg_bot/data/*.db-wal
+tg_bot/data/*.db-shm
+tg_bot/data/gigachat_token.json
