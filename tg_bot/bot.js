@@ -4,7 +4,8 @@ import { config } from './config.js';
 import { STATES, getSession, setState, clearSession } from './states.js';
 import { startScenario1, handleScenario1Text, handleScenario1Callback } from './handlers/scenario1.js';
 import { startScenario2, handleScenario2Callback } from './handlers/scenario2.js';
-import { startLLMScenario, handleLLMMessage, resetLLMScenario } from './handlers/scenarioLLM.js';
+import { startLLMScenario, handleLLMMessage, resetLLMScenario, LLM_MENU_CALLBACK, LLM_MANAGER_CALLBACK } from './handlers/scenarioLLM.js';
+import { saveRating } from './services/db.js';
 import { ensureHeaders } from './services/sheets.js';
 
 if (!config.botToken) {
@@ -91,6 +92,49 @@ bot.on('callback_query', async (ctx) => {
   // Сценарий 2 (faq:)
   if (data.startsWith('faq:')) {
     return handleScenario2Callback(ctx, startScenario1, showMainMenu);
+  }
+
+  // Кнопка «Главное меню» из LLM-режима
+  if (data === LLM_MENU_CALLBACK) {
+    await ctx.answerCbQuery();
+    await ctx.editMessageReplyMarkup(undefined);
+    clearSession(ctx.chat.id);
+    return showMainMenu(ctx);
+  }
+
+  // Кнопка «Связаться с менеджером»
+  if (data === LLM_MANAGER_CALLBACK) {
+    await ctx.answerCbQuery();
+    await ctx.editMessageReplyMarkup(undefined);
+    await ctx.reply(
+      '📞 Менеджер свяжется с вами в ближайшее время.\n\n' +
+      'Рабочие часы: пн–пт, 9:00–18:00 МСК.\n' +
+      'Если хотите ускорить — напишите нам напрямую или запишитесь на встречу.',
+      Markup.inlineKeyboard([
+        [Markup.button.callback('📅 Записаться на встречу', 'menu:book')],
+        [Markup.button.callback('🏠 Главное меню',           LLM_MENU_CALLBACK)],
+      ])
+    );
+    return;
+  }
+
+  // Оценка ответа 👍/👎
+  if (data.startsWith('rate:')) {
+    const [, rawRating, rawId] = data.split(':');
+    const rating         = parseInt(rawRating, 10);
+    const conversationId = parseInt(rawId, 10);
+
+    await ctx.answerCbQuery(rating === 1 ? '👍 Спасибо за оценку!' : '👎 Учтём, спасибо!');
+    await ctx.editMessageReplyMarkup(undefined);
+
+    if (!isNaN(conversationId)) {
+      try {
+        saveRating({ conversationId, chatId: ctx.chat.id, rating });
+      } catch (err) {
+        console.error('[rating] Ошибка записи в БД:', err.message);
+      }
+    }
+    return;
   }
 
   await ctx.answerCbQuery('Неизвестная команда.');

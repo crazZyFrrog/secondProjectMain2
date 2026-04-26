@@ -47,7 +47,45 @@ function initSchema(db) {
 
     CREATE INDEX IF NOT EXISTS idx_leads_telegram_id ON leads(telegram_id);
     CREATE INDEX IF NOT EXISTS idx_leads_created_at  ON leads(created_at);
+
+    -- LLM-диалоги (консультант Надежда)
+    CREATE TABLE IF NOT EXISTS llm_conversations (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at TEXT    NOT NULL,
+      chat_id    INTEGER NOT NULL,
+      username   TEXT    NOT NULL DEFAULT '',
+      question   TEXT    NOT NULL,
+      answer     TEXT    NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_conv_chat_id    ON llm_conversations(chat_id);
+    CREATE INDEX IF NOT EXISTS idx_conv_created_at ON llm_conversations(created_at);
+
+    -- Оценки ответов (👍/👎)
+    CREATE TABLE IF NOT EXISTS llm_ratings (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at      TEXT    NOT NULL,
+      conversation_id INTEGER NOT NULL REFERENCES llm_conversations(id),
+      chat_id         INTEGER NOT NULL,
+      rating          INTEGER NOT NULL  -- 1 = полезно, -1 = не помогло
+    );
+
+    -- Чанки базы знаний для RAG
+    CREATE TABLE IF NOT EXISTS knowledge_chunks (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      chunk_id  TEXT    NOT NULL UNIQUE,
+      source    TEXT    NOT NULL DEFAULT 'knowledge.md',
+      content   TEXT    NOT NULL,
+      embedding TEXT    NOT NULL  -- JSON-массив чисел
+    );
   `);
+
+  // Миграция: добавить chunks_used если колонки ещё нет
+  try {
+    db.exec('ALTER TABLE llm_conversations ADD COLUMN chunks_used TEXT DEFAULT NULL');
+  } catch {
+    // колонка уже существует
+  }
 }
 
 // ─── Продукты ───────────────────────────────────────────────────────────────
@@ -83,6 +121,74 @@ export function setConfig(key, value) {
   getDb()
     .prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)')
     .run(key, value);
+}
+
+// ─── LLM-диалоги ────────────────────────────────────────────────────────────
+
+export function saveConversation({ chatId, username, question, answer, chunksUsed = null }) {
+  const result = getDb()
+    .prepare(
+      `INSERT INTO llm_conversations
+         (created_at, chat_id, username, question, answer, chunks_used)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      new Date().toISOString(),
+      chatId,
+      username ?? '',
+      question,
+      answer,
+      chunksUsed ? JSON.stringify(chunksUsed) : null
+    );
+  return result.lastInsertRowid;
+}
+
+// ─── Чанки базы знаний ───────────────────────────────────────────────────────
+
+export function upsertChunk({ chunkId, source = 'knowledge.md', content, embedding }) {
+  getDb()
+    .prepare(`
+      INSERT INTO knowledge_chunks (chunk_id, source, content, embedding)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(chunk_id) DO UPDATE
+        SET content   = excluded.content,
+            embedding = excluded.embedding,
+            source    = excluded.source
+    `)
+    .run(chunkId, source, content, JSON.stringify(embedding));
+}
+
+export function getAllChunks() {
+  return getDb()
+    .prepare('SELECT chunk_id, content, embedding FROM knowledge_chunks')
+    .all()
+    .map((row) => ({
+      chunkId:   row.chunk_id,
+      content:   row.content,
+      embedding: row.embedding ? JSON.parse(row.embedding) : [],
+    }));
+}
+
+/** Возвращает только текст чанков — для BM25-ретривера (без парсинга эмбедингов). */
+export function getChunkTexts() {
+  return getDb()
+    .prepare('SELECT chunk_id, content FROM knowledge_chunks')
+    .all()
+    .map((row) => ({ chunkId: row.chunk_id, content: row.content }));
+}
+
+export function getChunkCount() {
+  return getDb()
+    .prepare('SELECT COUNT(*) as count FROM knowledge_chunks')
+    .get().count;
+}
+
+export function saveRating({ conversationId, chatId, rating }) {
+  getDb()
+    .prepare(
+      'INSERT INTO llm_ratings (created_at, conversation_id, chat_id, rating) VALUES (?, ?, ?, ?)'
+    )
+    .run(new Date().toISOString(), conversationId, chatId, rating);
 }
 
 // ─── Заявки ─────────────────────────────────────────────────────────────────

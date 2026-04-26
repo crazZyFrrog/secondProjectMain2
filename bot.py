@@ -1,5 +1,7 @@
+import asyncio
 import os
 import logging
+import pathlib
 from collections import defaultdict
 from dotenv import load_dotenv
 from telegram import Update
@@ -11,12 +13,13 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from openai import AsyncOpenAI
+from gigachat import GigaChat
+from gigachat.models import Chat, Messages, MessagesRole
 
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GIGACHAT_API_KEY = os.getenv("GIGACHAT_API_KEY")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -24,9 +27,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+GIGACHAT_CREDENTIALS = GIGACHAT_API_KEY
 
-SYSTEM_PROMPT = """Ты — Надежда, менеджер компании LandingBuilder.
+
+_KB_PATH = pathlib.Path(__file__).parent / "knowledge.md"
+
+
+def _load_knowledge_base() -> str:
+    """Читает knowledge.md при каждом вызове — обновление файла применяется мгновенно."""
+    try:
+        return _KB_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        logger.warning("Файл knowledge.md не найден по пути %s", _KB_PATH)
+        return ""
+
+
+SYSTEM_PROMPT_BASE = """Ты — Надежда, менеджер компании LandingBuilder.
 Ты помогаешь клиентам разобраться в услугах, ценах и возможностях платформы.
 Аудитория: частные предприниматели, малый и средний бизнес.
 
@@ -89,16 +105,32 @@ FALLBACK — ПРАВИЛО ЧЕСТНОГО НЕЗНАНИЯ:
 Если ты не знаешь ответа или вопрос выходит за рамки твоих данных:
 1. Честно признай: «Точного ответа на этот вопрос у меня нет»
 2. Не придумывай и не угадывай
-3. Предложи: «Лучше уточнить у нашего менеджера — он ответит точно»"""
+3. Предложи: «Лучше уточнить у нашего менеджера — он ответит точно»
+
+ПРАВИЛО РАБОТЫ С БАЗОЙ ЗНАНИЙ:
+— Отвечай ТОЛЬКО на основе информации из раздела «БАЗА ЗНАНИЙ» ниже
+— Если ответа на вопрос нет в базе знаний — честно скажи об этом и предложи связаться с менеджером
+— Не придумывай факты, цены или условия, которых нет в базе знаний"""
 
 MAX_HISTORY = 10
 
 chat_histories: dict[int, list[dict]] = defaultdict(list)
 
 
+def _build_system_prompt() -> str:
+    """Собирает системный промпт с актуальной базой знаний на момент запроса."""
+    kb = _load_knowledge_base()
+    kb_section = (
+        f"\n\nБАЗА ЗНАНИЙ (используй ТОЛЬКО эту информацию для ответов на вопросы):\n"
+        f"---\n{kb}\n---"
+        if kb else ""
+    )
+    return SYSTEM_PROMPT_BASE + kb_section
+
+
 def get_messages_for_api(chat_id: int) -> list[dict]:
     """Собирает список сообщений для API: системный промпт + история."""
-    return [{"role": "system", "content": SYSTEM_PROMPT}] + chat_histories[chat_id]
+    return [{"role": "system", "content": _build_system_prompt()}] + chat_histories[chat_id]
 
 
 def trim_history(chat_id: int) -> None:
@@ -136,12 +168,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=get_messages_for_api(chat_id),
-            temperature=0.7,
-            max_tokens=1024,
-        )
+        gc_messages = [
+            Messages(
+                role=MessagesRole(m["role"]),
+                content=m["content"],
+            )
+            for m in get_messages_for_api(chat_id)
+        ]
+        async with GigaChat(
+            credentials=GIGACHAT_CREDENTIALS, verify_ssl_certs=False
+        ) as giga:
+            response = await giga.achat(
+                Chat(messages=gc_messages, model="GigaChat")
+            )
         assistant_reply = response.choices[0].message.content
 
         chat_histories[chat_id].append({"role": "assistant", "content": assistant_reply})
@@ -150,7 +189,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(assistant_reply)
 
     except Exception as e:
-        logger.error("Ошибка при запросе к OpenAI: %s", e)
+        logger.error("Ошибка при запросе к GigaChat: %s", e, exc_info=True)
         await update.message.reply_text(
             "Что-то пошло не так с моей стороны. Попробуйте чуть позже или напишите нам напрямую."
         )
@@ -159,8 +198,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 def main() -> None:
     if not TELEGRAM_BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN не задан в .env файле")
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY не задан в .env файле")
+    if not GIGACHAT_API_KEY:
+        raise ValueError("GIGACHAT_API_KEY не задан в .env файле")
+
+    # Python 3.10+ не создаёт event loop автоматически
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
