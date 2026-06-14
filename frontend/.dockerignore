@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.*
+!.env.timeweb.example
+!.env.production.example
+playwright-report
+test-results
+tests
+*.md
+.git

@@ -225,61 +225,28 @@ VITE_API_URL=https://your-app.railway.app/api
 - ✅ Всё в одном месте
 - ✅ Данные в РФ
 - ✅ Русскоязычная поддержка
+- ✅ Нет блокировок IP Vercel у РФ-провайдеров
 - ❌ Чуть дороже
 
-### Шаг 1: Деплой Backend на Timeweb Cloud Apps
+### Полная инструкция
 
-#### 1.1. Регистрация
+**Пошаговый гайд:** [**docs/TIMEWEB_DEPLOY.md**](./docs/TIMEWEB_DEPLOY.md)
 
-1. Зайдите на [timeweb.cloud](https://timeweb.cloud)
-2. Зарегистрируйтесь
-3. Перейдите в раздел **"Cloud Apps"**
+### Кратко
 
-#### 1.2. Создание приложения
+| Компонент | Timeweb | Файл в репозитории |
+|-----------|---------|-------------------|
+| Backend | Cloud Apps → **Docker** (корень репо) | `Dockerfile` |
+| Frontend | Cloud Apps → **Docker** (`frontend/`) **или** Hosting + `dist/` | `frontend/Dockerfile` |
+| БД | Managed PostgreSQL | `DATABASE_URL` |
 
-1. Нажмите **"Создать приложение"**
-2. Выберите **"Python"**
-3. Подключите Git-репозиторий
+**Backend:** Apps → Docker, путь к проекту пустой, корневой `Dockerfile` (`uvicorn backend.main:app`, порт 80).
 
-#### 1.3. Создание базы данных
+**Frontend (Apps):** путь к проекту `frontend`, переменная `VITE_API_URL=https://ВАШ-BACKEND/api` **до сборки**.
 
-1. В настройках приложения добавьте **PostgreSQL**
-2. Скопируйте строку подключения
+**Frontend (Hosting):** `npm run build` + загрузка `frontend/dist/`; `.htaccess` уже в `frontend/public/`.
 
-#### 1.4. Настройка
-
-1. **Рабочая директория**: `backend`
-2. **Команда запуска**: `uvicorn main:app --host 0.0.0.0 --port 8080`
-3. Добавьте переменные окружения (аналогично Amvera)
-
-### Шаг 2: Деплой Frontend на Timeweb Hosting
-
-#### 2.1. Сборка локально
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-#### 2.2. Загрузка на хостинг
-
-1. В панели Timeweb перейдите в **"Hosting"**
-2. Создайте сайт
-3. Загрузите содержимое папки `frontend/dist` в корень сайта
-4. Настройте редирект для SPA:
-
-Создайте файл `.htaccess`:
-```apache
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
-</IfModule>
-```
+После деплоя обновите `FRONTEND_URL` на бэкенде и пересоберите фронт с актуальным `VITE_API_URL`.
 
 ---
 
