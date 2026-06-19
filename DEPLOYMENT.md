@@ -9,7 +9,8 @@
 - [Вариант 1: Vercel + Amvera](#вариант-1-vercel--amvera-рекомендуется)
 - [Вариант 2: Vercel + Railway](#вариант-2-vercel--railway)
 - [Вариант 3: Timeweb Cloud (всё в одном)](#вариант-3-timeweb-cloud-всё-в-одном)
-- [Вариант 4: VDS/VPS](#вариант-4-vdsvps-полный-контроль)
+- [Вариант 4: Гибрид Timeweb Хостинг + Amvera](#вариант-4-гибрид-timeweb-хостинг--amvera)
+- [Вариант 5: VDS/VPS](#вариант-5-vdsvps-полный-контроль)
 - [Настройка переменных окружения](#настройка-переменных-окружения)
 - [Проверка работы](#проверка-работы)
 - [Устранение проблем](#устранение-проблем)
@@ -31,9 +32,10 @@
 
 | Вариант | Стоимость | Сложность | Данные в РФ | Рекомендация |
 |---------|-----------|-----------|-------------|--------------|
-| Vercel + Amvera | ~250₽/мес | Низкая | Да (Amvera) | ⭐ Лучший вариант |
+| **Timeweb Хостинг + Amvera** | ~150–400₽/мес | Низкая | Да (Amvera) | ⭐ Дешёвый старт, без Cloud PostgreSQL |
+| Vercel + Amvera | ~250₽/мес | Низкая | Да (Amvera) | Если фронт на Vercel |
 | Vercel + Railway | ~0-5$/мес | Низкая | Нет | Для тестов |
-| Timeweb Cloud | 300-500₽/мес | Средняя | Да | Всё в одном месте |
+| Timeweb Cloud | 400-900₽/мес | Средняя | Да | Всё в одном месте |
 | VDS/VPS | 200-500₽/мес | Высокая | Да | Полный контроль |
 
 ---
@@ -250,7 +252,40 @@ VITE_API_URL=https://your-app.railway.app/api
 
 ---
 
-## 🖥 Вариант 4: VDS/VPS (полный контроль)
+## 🔗 Вариант 4: Гибрид Timeweb Хостинг + Amvera
+
+### Преимущества
+- ✅ Дешевле, чем Timeweb Cloud PostgreSQL (~770 ₽/мес)
+- ✅ Бэкенд и БД уже на Amvera — меняется только фронт
+- ✅ Сайт в РФ (Timeweb Хостинг), данные в РФ (Amvera)
+- ✅ Нет блокировок IP Vercel у РФ-провайдеров
+- ❌ Фронт обновляется вручную: `npm run build` + FTP
+
+### Полная инструкция для новичка
+
+**Пошаговый гайд:** [**docs/TIMEWEB_AMVERA_HYBRID.md**](./docs/TIMEWEB_AMVERA_HYBRID.md)
+
+### Кратко
+
+| Компонент | Где | Действие |
+|-----------|-----|----------|
+| Фронтенд | **hosting.timeweb.ru** | `npm run build` → загрузить `dist/` по FTP |
+| Бэкенд + PostgreSQL | **Amvera** (без изменений) | Обновить `FRONTEND_URL` |
+| Домен | **Reg.ru** | DNS на Timeweb Хостинг |
+
+**Шаблон env:** [`frontend/.env.timeweb-hosting.example`](./frontend/.env.timeweb-hosting.example)
+
+```bash
+VITE_API_URL=https://conslanback-vladislav7599.amvera.io/api
+```
+
+**На Amvera:** `FRONTEND_URL=https://myfirstproject.su,https://www.myfirstproject.su,http://localhost:5173`
+
+**Не нужен:** `timeweb.cloud`, managed PostgreSQL, MySQL на хостинге.
+
+---
+
+## 🖥 Вариант 5: VDS/VPS (полный контроль)
 
 ### Подходит для:
 - Опытных пользователей

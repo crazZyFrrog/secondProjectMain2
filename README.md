@@ -68,7 +68,8 @@ python -m uvicorn main:app --reload --port 5001
 - [Frontend README](./frontend/README.md) - Детальная документация фронтенда
 - [Backend README](./backend/README.md) - Документация бэкенда и API
 - [**🚀 DEPLOYMENT GUIDE**](./DEPLOYMENT.md) - **Полное руководство по деплою в продакшен**
-- [**☁️ Timeweb Cloud**](./docs/TIMEWEB_DEPLOY.md) - **Деплой фронта и бэкенда на Timeweb**
+- [**🔗 Timeweb + Amvera (гибрид)**](./docs/TIMEWEB_AMVERA_HYBRID.md) - **Фронт на Timeweb Хостинг, API на Amvera — рекомендуется для старта**
+- [**☁️ Timeweb Cloud**](./docs/TIMEWEB_DEPLOY.md) - **Деплой фронта и бэкенда на Timeweb Cloud**
 - [**Testing Guide**](./docs/testing/TESTING.md) - **Полное руководство по E2E тестированию на Playwright**
 - [Telegram Setup](./backend/docs/TELEGRAM_SETUP.md) - **Настройка Telegram-уведомлений**
 - [Структура страниц](./frontend/docs/STRUCTURE.md) - Описание всех страниц
